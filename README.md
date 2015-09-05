@@ -13,10 +13,4 @@ This R project contains data and scripts to analyze recovery dynamics of *Symbio
 
 **setup.R:** R script that imports and quality controls qPCR data in preparation for analysis
 
-**tempdata/:** Directory containing temperature data from reef sites in Kaneohe Bay during study period
-
-**gsp.R:** R script defining general spline functions for use in mixed models from "spida" package (https://r-forge.r-project.org/R/?group_id=430)
-
-**setup.R:** R script that imports and quality controls qPCR data in preparation for analysis
-
 **analysis.R:** R script for data analysis
