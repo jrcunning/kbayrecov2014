@@ -8,8 +8,7 @@ source("gsp.R")
 # =================================================================================================
 # DATA ANALYSIS
 # =================================================================================================
-# • Patterns in dominant symbionts and bleaching --------------------------------------------
-# --Use Mcap.f data.frame (duplicates removed but data unsuitable for quantitative analysis remain)
+# • Patterns in dominant symbionts and bleaching
 # --Figure: Symbiont clades in each colony over time -------------------------
 clades <- melt(Mcap.f, id.vars=c("sample", "date", "vis", "reef"), measure.vars="syms",
                factorsAsStrings=FALSE)
@@ -212,93 +211,14 @@ par(mfrow=c(1,1))
 plot(vis ~ tdom, data=Mcap.f.summ)
 # CONCLUSION: visual bleaching depends on clade--70% of clade C colonies appeared bleached, while
 #             no clade D colonies appeared bleached
-
-
 # -------------------------------------------------------------------------------------------------
-# • Quantitative analysis of S/H ratios-- data setup ------------------------------------------------------------
-# Remove CD colony 40?
-
-
-# Bleaching severity in October -- effect of symbiont clade and visual appearance
-Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
-model <- lm(log(tot.SH) ~ dom:vis, data=Mcap.ff.oct)
-anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
-plot(effect("dom:vis", model))
-TukeyHSD(aov(model))  # BLEACHED C SAME AS NONBLEACHED D--- BECAUSE OF COPY NUMBER?
-# Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
-
-
-
-### MIXED MODELS TO ANALYZE RECOVERY TRENDS
-# Subset data for mixed models
-Mcap.ff.octdec <- subset(Mcap.ff, date <= "2014-12-16")
+# • Quantitative analysis of S/H ratios
+# --Symbiont abundance in bleached corals over time ----------------
 Mcap.ff.bleached <- subset(Mcap.ff, vis=="bleached")
-Mcap.ff.bleached.octdec <- subset(Mcap.ff.bleached, date <= "2014-12-16")
-Mcap.ff.bleached.octjan <- subset(Mcap.ff.bleached, date <= "2015-01-14")
-Mcap.ff.notbleached <- subset(Mcap.ff, vis=="not bleached")
-Mcap.ff.notbleached.octdec <- subset(Mcap.ff.notbleached, date <= "2014-12-16")
-Mcap.ff.notbleached.octjan <- subset(Mcap.ff.notbleached, date <= "2015-01-14")
-
-# HOW DID BLEACHED CORALS RECOVER OVER TIME AT DIFFERENT REEFS?
-# Visualize data/ trajectories for each colony over time
+# Visualize raw data / trajectories for each colony over time
 xyplot(log(tot.SH) ~ days | reef, groups = ~ sample, data = Mcap.ff.bleached[order(Mcap.ff.bleached$days), ],
        type = "o", layout=c(3, 1), main="bleached colonies")
-
-# ---first, treat date as factor, not continuous ------------------
-model <- lmer(log(tot.SH) ~ fdate + reef + fdate:reef + (1|sample), data=Mcap.ff.bleached)
-dropterm(model, test="Chisq")   # significant date:reef interaction with all time points
-                                # smaller p value with unfiltered data
-plot(effect("fdate:reef", model), multiline=T, ci.style="bars")
-
-model.lsm <- lsmeans(model, c("fdate", "reef"), contr = "cld")
-model.lsm   # pairwise tests of means
-
-model.lsm$date <- as.Date(model.lsm$fdate, format="%Y%m%d")
-model.lsm <- model.lsm[order(model.lsm$date), ]
-par(mfrow=c(1,1))
-plot(lsmean ~ date, model.lsm[which(model.lsm$reef=="HIMB"), ], col="red", type="o", ylim=c(-3,2),
-     xlab="Date", ylab="log S/H ratio", main="Recovery of bleached corals")
-lines(lsmean ~ date, model.lsm[which(model.lsm$reef=="25"), ], col="darkgreen", type="o")
-lines(lsmean ~ date, model.lsm[which(model.lsm$reef=="44"), ], col="blue", type="o")
-arrows(model.lsm[which(model.lsm$reef=="44"), ]$date, 
-       model.lsm[which(model.lsm$reef=="44"), ]$lsmean+model.lsm[which(model.lsm$reef=="44"), ]$SE, 
-       model.lsm[which(model.lsm$reef=="44"), ]$date, 
-       model.lsm[which(model.lsm$reef=="44"), ]$lsmean-model.lsm[which(model.lsm$reef=="44"), ]$SE,
-       code=0, col="blue")
-arrows(model.lsm[which(model.lsm$reef=="25"), ]$date, 
-       model.lsm[which(model.lsm$reef=="25"), ]$lsmean+model.lsm[which(model.lsm$reef=="25"), ]$SE, 
-       model.lsm[which(model.lsm$reef=="25"), ]$date, 
-       model.lsm[which(model.lsm$reef=="25"), ]$lsmean-model.lsm[which(model.lsm$reef=="25"), ]$SE,
-       code=0, col="darkgreen")
-arrows(model.lsm[which(model.lsm$reef=="HIMB"), ]$date, 
-       model.lsm[which(model.lsm$reef=="HIMB"), ]$lsmean+model.lsm[which(model.lsm$reef=="HIMB"), ]$SE, 
-       model.lsm[which(model.lsm$reef=="HIMB"), ]$date, 
-       model.lsm[which(model.lsm$reef=="HIMB"), ]$lsmean-model.lsm[which(model.lsm$reef=="HIMB"), ]$SE,
-       code=0, col="red")
-legend("topright", levels(model.lsm$reef)[c(2,1,3)], lty=1, col=c("blue", "darkgreen", "red"))
-
-xyplot(lsmean ~ date, groups = ~reef, data=model.lsm[order(model.lsm$date), ], type="o",
-       auto.key=T)
-
-# ---treat time as continuous, model linear response from october until december------------------
-xyplot(log(tot.SH) ~ days | reef, groups = ~ sample, data = Mcap.ff.bleached.octdec,
-       type = "o", layout=c(3, 1), main="bleached colonies", auto.key=F)
-model <- lmer(log(tot.SH) ~ days * reef + (days|sample), data=Mcap.ff.bleached.octdec)  # random slopes and intercepts for each colony (sample)
-sel <- lmerTest::step(model); sel  # Backward elimination of non-significant random and fixed effects
-model <- update(model, formula=formula(sel$model))  # Update model to include only significant terms
-dropterm(model, test="Chisq")  # LRT for fixed effects
-# Model diagnostic plots
-plot(model); qqmath(model)
-1-var(residuals(model))/(var(model.response(model.frame(model))))  #pseudo-R^2
-# Remove outliers with residuals > 2.5 s.d.'s from 0
-rm.outliers <- romr.fnc(model, Mcap.ff.bleached.octdec, trim=2.5)
-rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]
-model <- update(model, data = rm.outliers$data)
-plot(effect("days:reef", model, KR=T), multiline=T, ci.style="bands")
-model.lst <- lstrends(model, ~ reef, var = "days")
-cld(model.lst)  # SLOPES ARE SIG. DIFF BETWEEN HIMB AND 44, 25 IS N.S. INTERMEDIATE
-
-# ---POLYNOMIAL REGRESSION OVER RECOVERY PERIOD-----------
+#     --Quadratic regression over recovery period only (October to January) -----------
 # Plot raw data for each colony
 xyplot(log(tot.SH) ~ days | reef, groups = ~ sample, data = Mcap.ff.bleached.octjan,
        type = "o", layout=c(3, 1), main="bleached colonies", auto.key=F)
@@ -323,7 +243,7 @@ mcp.fnc(model)  # Model diagnostics -- residuals are homoscedastic, QQplot is no
 # Predictions using base R
 pred <- expand.grid(days=seq(0,82,2), reef=factor(c("44", "25", "HIMB")))
 pred$fit <- predict(qmodel, newdata=pred, re.form=NA, type="response")  # re.form=NA means all random effect values are set to zero--predictions are made at the population level
-xyplot(fit ~ days, groups=reef, data=pred, type="l")  # Plot model predictions
+#xyplot(fit ~ days, groups=reef, data=pred, type="l")  # Plot model predictions
 
 # Generate predictions and prediction intervals using bootMer over days 0-82
 newdat <- expand.grid(days=seq(0,82,2), reef=factor(c("44", "25", "HIMB")))
@@ -333,6 +253,7 @@ newdat$pred <- predict(model, newdat, re.form=NA)
 newdat$lci <- apply(bootfit$t, 2, quantile, 0.05)
 newdat$uci <- apply(bootfit$t, 2, quantile, 0.95)
 # Plot predicted values with 90% confidence intervals
+par(oma=c(1,1,1,1), mar=c(2,2,2,2))
 with(newdat[newdat$reef=="HIMB", ], {
   plot(pred ~ days, type="l", col="red", ylim=c(-3.25,1.5))
   addpoly(days, lci, uci, col=alpha("red", 0.5))
@@ -345,27 +266,8 @@ with(newdat[newdat$reef=="44", ], {
   lines(pred ~ days, col="darkgreen")
   addpoly(days, lci, uci, col=alpha("darkgreen", 0.5))
 })
-
-
-# Generate prediction intervals using effects package
-eff <- Effect(c("days", "reef"), model, xlevels=list(days=1:82), confidence.level=0.90)
-#plot(eff, multiline=T, ci.style="bands", ylim=c(-3.5,2))
-effdf <- data.frame(eff)   # HOW TO INTERPRET SE VS. CONF.INT.?
-with(effdf[effdf$reef=="HIMB", ], {
-  plot(fit ~ days, type="l", col="red", ylim=c(-3.5,2))
-  addpoly(days, lower, upper, col=alpha("red", 0.5))
-})
-with(effdf[effdf$reef=="25", ], {
-  lines(fit ~ days, col="blue")
-  addpoly(days, lower, upper, col=alpha("blue", 0.5))
-})
-with(effdf[effdf$reef=="44", ], {
-  lines(fit ~ days, col="darkgreen")
-  addpoly(days, lower, upper, col=alpha("darkgreen", 0.5))
-})
-
-# ---PIECEWISE POLYNOMIAL REGRESSION OVER FULL TIME SERIES-----------------
-# Fit model--------------------
+#     --Piecewise polynomial regression over full time period (October to May) --------------------
+# Fit model
 # Spline fit with knot at 82 days (january), quadratic fit before then, linear after. continuous at knot.
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 model <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.bleached)
@@ -391,48 +293,9 @@ mdf <- model.frame(model)
 model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), days=as.numeric(as.character(levels(factor(mdf$`sp(days)`[,1]))))),
                               mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=mean)$x,
                               sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=sd)$x)
-
 model.data.summ <- split(model.data.summ, f=model.data.summ$reef)
-# Plot raw data mean ± sd with model fit and CI-------------
 
-par(mfrow=c(2,2), mar=c(2,2,2,2))
-with(model.data.summ$`HIMB`, {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.25,2.5), bty="n")
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat$"HIMB", lines(days, pred))
-  with(newdat$"HIMB", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-with(model.data.summ$`25`, {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.25,2.5), bty="n")
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat$"25", lines(days, pred))
-  with(newdat$"25", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-with(model.data.summ$`44`, {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.25,2.5), bty="n")
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat$"44", lines(days, pred))
-  with(newdat$"44", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-par(mar=c(2,1,1,2))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
-box(lty=2, col=alpha("black", 0.8))
-with(newdat$"HIMB", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("red", 0.3))
-})
-with(newdat$"25", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("blue", 0.3))
-})
-with(newdat$"44", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
-})
-# Plot same data with different layout-------------
+# Plot raw data mean ± SD along with model predictions and C.I.'s 
 #layout(mat = rbind(c(1,4),c(2,4),c(3,5)))
 layout(mat=matrix(c(1,2,3,4,4)))
 #par(mfrow=c(3,1))
@@ -491,31 +354,12 @@ with(newdat$"44", {
 #   points(mean ~ date, type="l", col="red", ylim=c(22,29))
 #   addpoly(date, min, max, col=alpha("red", 0.3))
 # })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Look at not-bleached colonies----------------
-# remove CD colony
-Mcap.ff.notbleached <- droplevels(subset(Mcap.ff.notbleached, tdom!="CD"))
-Mcap.ff.notbleached.octdec <- subset(Mcap.ff.notbleached, date <= "2014-12-16")
-Mcap.ff.notbleached.octjan <- subset(Mcap.ff.notbleached, date <= "2015-01-14")
+# --Symbiont abundance in non-bleached corals over time -------------------------------------------
+Mcap.ff.notbleached <- subset(Mcap.ff, vis=="not bleached")
+Mcap.ff.notbleached <- droplevels(subset(Mcap.ff.notbleached, tdom!="CD"))  # Remove colony 40
 xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ sample, data=Mcap.ff.notbleached[order(Mcap.ff.notbleached$days), ],
        type = "o", layout=c(3, 2), main="not bleached colonies")
-# piecewise polynomial regression
+#     --Piecewise linear regression over full time period (October to May) --------------------
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 model <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.notbleached)
 model2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (sp(days) | sample), data=Mcap.ff.notbleached)
@@ -537,7 +381,7 @@ newdat$pred <- predict(model, newdat, re.form=NA)
 newdat$lci <- apply(bootfit$t, 2, quantile, 0.05)
 newdat$uci <- apply(bootfit$t, 2, quantile, 0.95)
 newdat <- split(newdat, f=newdat$reef)
-# Plot same data with different layout-------------
+# Plot data
 mdf <- model.frame(model)
 model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), days=as.numeric(as.character(levels(factor(mdf$`sp2(days)`[,1]))))),
                               mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp2(days)`[,1])), FUN=mean)$x,
@@ -605,73 +449,15 @@ with(newdat$"44", {
 
 
 
+# Bleaching severity in October -- effect of symbiont clade and visual appearance------------
+Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
+model <- lm(log(tot.SH) ~ dom:vis, data=Mcap.ff.oct)
+anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
+plot(effect("dom:vis", model))
+TukeyHSD(aov(model))  # BLEACHED C SAME AS NONBLEACHED D--- BECAUSE OF COPY NUMBER?
+# Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
 
 
-
-
-# model not bleached colonies oct - dec------------
-model <- lmer(log(tot.SH) ~ days * tdom + reef + (1+days|sample), data=Mcap.ff.notbleached.octdec)
-dropterm(model, test="Chisq")
-plot(effect("days:tdom", model))
-model.lst <- lstrends(model, "tdom", var="days")
-cld(model.lst)  # TRENDS ARE SIG DIFF, C GOES DOWN< D GOES UP
-
-
-
-
-
-
-
-# model not bleached colonies oct - jan
-model <- lmer(log(tot.SH) ~ poly(days, 2) * tdom + reef + (1+days|sample), data=Mcap.ff.notbleached.octjan)
-#mcp.fnc(model)
-#rm.outliers <- romr.fnc(model, Mcap.ff.notbleached.octjan)
-#rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2), ]
-#model.data <- rm.outliers$data
-#model <- update(model, data = model.data)
-
-
-dropterm(model, test="Chisq")
-plot(Effect(c("days", "tdom"), model), multiline=T, ci.style="bands")
-
-
-
-
-
-
-
-
-# Look at presence of C and D in bleached corals at each time point
-Mcap.f.bleached$present <- ifelse(is.na(Mcap.f.bleached$C.SH), ifelse(is.na(Mcap.f.bleached$D.SH), NA, "D"),
-                                  ifelse(is.na(Mcap.f.bleached$D.SH), "C", "CD"))
-plot(factor(present) ~ factor(date), Mcap.f.bleached)
-plot(factor(present) ~ factor(reef), Mcap.f.bleached)
-plot(factor(present) ~ interaction(factor(date), factor(reef)), Mcap.f.bleached)
-
-
-# Look at abundance of D in bleached corals
-boxplot(log(Mcap.f.bleached$D.SH) ~ Mcap.f.bleached$days)
-boxplot(log(Mcap.f.bleached$D.SH) ~ Mcap.f.bleached$reef)
-
-model <- lmer(log(D.SH) ~ fdate * reef + (1|sample), data=Mcap.f.bleached)
-summary(model)
-dropterm(model, test="Chisq")
-lsmeans(model, c("fdate", "reef"), contr="cld")
-boxplot(log(D.SH) ~ fdate * reef, Mcap.f.bleached)
-
-
-xyplot(log(D.SH) ~ days | reef, group = ~sample, data=Mcap.f.bleached[order(Mcap.f.bleached$days), ], type="o")
-xyplot(log(D.SH) ~ days | reef + tdom, group = ~sample, data=Mcap.f.notbleached[order(Mcap.f.notbleached$days), ], type="o")
-
-
-xyplot(log(D.SH) ~ days | sample, data=Mcap.f.C[order(Mcap.f.C$days), ], type="o")
-
-xyplot(log(C.SH) ~ days | sample, data=Mcap.f.D[order(Mcap.f.D$days), ], type="o")
-
-Mcap.f.bleached$DC <- Mcap.f.bleached$D.SH / Mcap.f.bleached$C.SH
-
-
-xyplot(DC ~ days | sample, data=Mcap.f.bleached[order(Mcap.f.bleached$days), ], type="o")
 
 
 
