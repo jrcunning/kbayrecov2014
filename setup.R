@@ -4,9 +4,14 @@
 # =================================================================================================
 # DATA PREPARATION
 # =================================================================================================
-# • Load libraries --------------------------------------------------------------------------
-library(lme4); library(MASS); library(effects); library(reshape2); library(lattice); library(lmerTest); library(LMERConvenienceFunctions)
-library(lsmeans); library(pbkrtest); library(scales); library(RColorBrewer); library(merTools)
+# • Load libraries --------------------------------------------------------------------------------
+library(lme4); library(MASS); library(reshape2); library(lattice); library(lmerTest) 
+library(LMERConvenienceFunctions); library(pbkrtest); library(scales); library(RColorBrewer) 
+library(merTools); library(devtools)
+## SPIDA package available at http://r-forge.r-project.org/projects/spida/
+#system(paste("svn checkout svn://svn.r-forge.r-project.org/svnroot/spida/"))
+#devtools::install("spida/pkg")
+library(spida)
 
 addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
   ii <- order(x)
@@ -16,7 +21,7 @@ addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
   polygon(c(x,rev(x)), c(y1, rev(y2)), col=col, border=NA,...)
 }
 # -------------------------------------------------------------------------------------------------
-# • Load data -------------------------------------------------------------------------------
+# • Load data -------------------------------------------------------------------------------------
 # Define data calling function
 qPCR <- function(files=list(), sym.target=list(), host.target=NULL, 
                  fluor.norm=list(),
@@ -171,7 +176,7 @@ Mcap.f$tdom <- dom[as.character(Mcap.f$sample), "dom"]
 # hist(Mcap.f$Mcap.Ct.mean, breaks=seq(15,40,1), xlim=c(15,40), xaxt="n", main="Mcap Ct values")
 # par(mar=c(5,3,0,1))
 # boxplot(Mcap.f$Mcap.Ct.mean,ylab="Ct value", horizontal=T, ylim=c(15,40), frame=F)
-# Remove samples with high outlying Mcap Ct values
+# Remove samples with high outlying Mcap Ct values for quantitative analyses
 thresh <- boxplot.stats(Mcap.f$Mcap.Ct.mean)$stats[5]
 Mcap.ff <- Mcap.f[which(Mcap.f$Mcap.Ct.mean <= thresh), ]
 # -------------------------------------------------------------------------------------------------
