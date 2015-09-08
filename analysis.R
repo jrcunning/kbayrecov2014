@@ -271,6 +271,11 @@ sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 mod.b <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.b)
 mod.b2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (sp(days) | sample), data=Mcap.ff.b)
 anova(mod.b, mod.b2)  # Model with random intercept only is best
+# Test parameters
+summary(mod.b)  # Coefficients for sp(days)D1(0) indicate slope at days=0
+                # Coefficients for sp(days)D2(0) are neg. for convex, pos. for concave
+lstrends(mod.b, ~ reef, var = "days")  # Where do these values come from?
+dropterm(mod.b, test="Chisq")
 # Remove outliers with residuals > 2.5 s.d.'s from 0
 rm.outliers <- romr.fnc(mod.b, Mcap.ff.b, trim=2.5)
 rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]  # which data points are removed
@@ -344,76 +349,92 @@ xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ sample, data=Mcap.ff.nb[orde
 # - Analysis: Piecewise linear regression over full time period (October to May) --------------------
 # Subset data
 Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
-Mcap.ff.nb <- subset(Mcap.ff.nb, tdom!="CD")  # Remove mixed colony 40 for now
+Mcap.ff.nb <- droplevels(subset(Mcap.ff.nb, tdom!="CD"))  # Remove mixed colony 40 for now
 # Build model
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) * tdom * reef + (1 | sample), data=Mcap.ff.nb)
 mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * tdom * reef + (sp(days) | sample), data=Mcap.ff.nb)
 anova(mod.nb, mod.nb2)  # Model with random intercept only is best
-sp2 <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
-mod.nb3 <- lmerTest::lmer(log(tot.SH) ~ sp2(days) * tdom * reef + (1 | sample), data=Mcap.ff.nb)
+splin <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
+mod.nb3 <- lmerTest::lmer(log(tot.SH) ~ splin(days) * tdom * reef + (1 | sample), data=Mcap.ff.nb)
 anova(mod.nb, mod.nb3)  # Quadratic fit is better
 mod.nb <- mod.nb  # Choose quadratic model with random intercept only
+dropterm(mod.nb, test="Chisq")  # FULL INT NOT SIG
+mod.nb4 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + tdom + reef + 
+                            sp(days):tdom + sp(days):reef + tdom:reef +
+                            (1 | sample), data=Mcap.ff.nb)
+mod.nb5 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + tdom + reef + 
+                            sp(days):tdom + sp(days):reef +
+                            (1 | sample), data=Mcap.ff.nb)
+mod.nb6 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + reef + 
+                            (1 | sample), data=Mcap.ff.nb)
+mod.nb7 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
+anova(mod.nb6, mod.nb7)
+mod.nb8 <- lmerTest::lmer(log(tot.SH) ~ splin(days) + reef + (1 | sample), data=Mcap.ff.nb)
+anova(mod.nb6, mod.nb8)
+mod.nb <- mod.nb8
+dropterm(mod.nb, test="Chisq")
 # Remove outliers with residuals > 2.5 s.d.'s from 0
 rm.outliers <- romr.fnc(mod.nb, Mcap.ff.nb, trim=2.5)
 rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]  # which data points are removed
 mod.nb <- update(mod.nb, data = rm.outliers$data)
 # Generate predictions and prediction intervals using bootMer over days 0-194
-newdat.nb <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")), tdom=factor(c("C", "D")))
+newdat.nb <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")))
 bootfit <- bootMer(mod.nb, FUN=function(x) predict(x, newdat.nb, re.form=NA), nsim=999)
 # Extract 90% confidence interval on predicted values
 newdat.nb$pred <- predict(mod.nb, newdat.nb, re.form=NA)
 newdat.nb$lci <- apply(bootfit$t, 2, quantile, 0.05)
 newdat.nb$uci <- apply(bootfit$t, 2, quantile, 0.95)
-newdat.nb <- split(newdat.nb, f=interaction(newdat.nb$reef, newdat.nb$tdom))
+#newdat.nb <- split(newdat.nb, f=interaction(newdat.nb$reef, newdat.nb$tdom))
+newdat.nb <- split(newdat.nb, f=newdat.nb$reef)
 # Plot data
 mdf <- model.frame(mod.nb)
-model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), tdom=levels(mdf$tdom),
+model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef),
                                           days=as.numeric(as.character(levels(factor(mdf$`sp(days)`[,1]))))),
-                              mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$tdom, mdf$`sp(days)`[,1])), FUN=mean)$x,
-                              sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$tdom, mdf$`sp(days)`[,1])), FUN=sd)$x)
+                              mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=mean)$x,
+                              sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=sd)$x)
 
-model.data.summ <- split(model.data.summ, f=interaction(model.data.summ$reef, model.data.summ$tdom))
+model.data.summ <- split(model.data.summ, f=model.data.summ$reef)
 # PLOTTT
-layout(mat=matrix(c(1,2,3,4,4,5,6,7,8,8), ncol=2))
+layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
 par(mar=c(0,2,0,0))
-with(model.data.summ$"44.C", {
+with(model.data.summ$"44", {
   plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat.nb$"44.C", lines(days, pred))
-  with(newdat.nb$"44.C", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+  with(newdat.nb$"44", lines(days, pred))
+  with(newdat.nb$"44", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
-with(model.data.summ$"25.C", {
+with(model.data.summ$"25", {
   plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.nb$"25.C", lines(days, pred))
-  with(newdat.nb$"25.C", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+  with(newdat.nb$"25", lines(days, pred))
+  with(newdat.nb$"25", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
-with(model.data.summ$"HIMB.C", {
+with(model.data.summ$"HIMB", {
   plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.nb$"HIMB.C", lines(days, pred))
-  with(newdat.nb$"HIMB.C", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+  with(newdat.nb$"HIMB", lines(days, pred))
+  with(newdat.nb$"HIMB", addpoly(days, lci, uci, col=alpha("red", 0.3)))
   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
 plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
-with(newdat.nb$"HIMB.C", {
+with(newdat.nb$"HIMB", {
   lines(days, pred)
   addpoly(days, lci, uci, col=alpha("red", 0.3))
 })
-with(newdat.nb$"25.C", {
+with(newdat.nb$"25", {
   lines(days, pred)
   addpoly(days, lci, uci, col=alpha("blue", 0.3))
 })
-with(newdat.nb$"44.C", {
+with(newdat.nb$"44", {
   lines(days, pred)
   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
 })
@@ -477,6 +498,8 @@ sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 mod.all <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | sample), data=Mcap.ff)
 mod.all2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (sp(days) | sample), data=Mcap.ff)
 anova(mod.all, mod.all2)  # Model with random intercept only is best
+# Test significance of factors in model
+dropterm(mod.all, test="Chisq")
 # Remove outliers with residuals > 2.5 s.d.'s from 0
 rm.outliers <- romr.fnc(mod.all, Mcap.ff, trim=2.5)
 rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]  # which data points are removed
