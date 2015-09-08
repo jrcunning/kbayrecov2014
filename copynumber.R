@@ -28,18 +28,23 @@ with(stdcurve, lines(C_, fit))
 # Calculate unknown quantities based on standard curve
 cn$UNKNOWN$fit <- 10^predict(std, cn$UNKNOWN)
 cn$UNKNOWN
+hist(cn$UNKNOWN$C_)
 
 # Restructure data
-cndat <- dcast(cn$UNKNOWN, formula = Sample.Name ~ Target.Name, value.var="fit", fun.aggregate = mean)
+cndat <- dcast(cn$UNKNOWN, formula = Sample.Name ~ Target.Name, value.var="Quantity", fun.aggregate = mean)
 cndat$Sample <- substr(cndat$Sample.Name, 5, 7)
 cndat
 
 # Import cell count data
 cells <- read.csv("cells.csv")
-cells$cells <- cells$cells.mL * 0.5 * (100/1000) * 0.95 * .02  # Actual # of cells going into reaction
+cells$cells <- cells$cells.mL * 0.5 * (100/1000) * 0.955 * (1/50)  # Actual # of cells going into reaction
 
 final <- merge(cndat, cells, by="Sample")
-final
+final[is.na(final)] <- 0
+
+#D <- final[which(final$C==0), ]
+#final <- D
+#mean(final$D / final$cells)
 
 # Singular value decomposition
 copies<-as.matrix(final[,3:4])
@@ -57,3 +62,22 @@ x=svd$v%*%wp%*%t(svd$u)%*%cells
 
 copynumber=1/x
 copynumber
+
+#----------
+# Restructure data
+cndat <- dcast(cn$UNKNOWN, formula = Sample.Name ~ Target.Name, value.var="C_", fun.aggregate = mean)
+cndat$Sample <- substr(cndat$Sample.Name, 5, 7)
+cndat
+
+cells <- read.csv("cells.csv")
+cells$cells <- cells$cells.mL * 0.5 * (100/1000) * 0.955 * (1/50)  # Actual # of cells going into reaction
+
+final <- merge(cndat, cells, by="Sample")
+final[is.na(final)] <- 0
+final
+
+D <- final[which(final$D < final$C), ]
+final <- D
+final <- final[-c(2, 4), ]
+
+plot(D ~ log(cells, 2), final)

@@ -298,30 +298,30 @@ model.data.summ <- split(model.data.summ, f=model.data.summ$reef)
 layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(2,0.4,0), oma=c(1,1,1,1), mar=c(0,2,0,0))
 with(model.data.summ$`44`, {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.b$"44", lines(days, pred))
   with(newdat.b$"44", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$`25`, {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.b$"25", lines(days, pred))
   with(newdat.b$"25", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$`HIMB`, {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.b$"HIMB", lines(days, pred))
   with(newdat.b$"HIMB", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+plot(NA, ylim=c(-5,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
 with(newdat.b$"HIMB", {
@@ -352,7 +352,7 @@ Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
 Mcap.ff.nb <- droplevels(subset(Mcap.ff.nb, tdom!="CD"))  # Remove mixed colony 40 for now
 # Build model
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
-mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) * tdom * reef + (1 | sample), data=Mcap.ff.nb)
+mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
 mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * tdom * reef + (sp(days) | sample), data=Mcap.ff.nb)
 anova(mod.nb, mod.nb2)  # Model with random intercept only is best
 splin <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
@@ -372,7 +372,7 @@ mod.nb7 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mca
 anova(mod.nb6, mod.nb7)
 mod.nb8 <- lmerTest::lmer(log(tot.SH) ~ splin(days) + reef + (1 | sample), data=Mcap.ff.nb)
 anova(mod.nb6, mod.nb8)
-mod.nb <- mod.nb8
+mod.nb <- mod.nb
 dropterm(mod.nb, test="Chisq")
 # Remove outliers with residuals > 2.5 s.d.'s from 0
 rm.outliers <- romr.fnc(mod.nb, Mcap.ff.nb, trim=2.5)
@@ -388,42 +388,42 @@ newdat.nb$uci <- apply(bootfit$t, 2, quantile, 0.95)
 #newdat.nb <- split(newdat.nb, f=interaction(newdat.nb$reef, newdat.nb$tdom))
 newdat.nb <- split(newdat.nb, f=newdat.nb$reef)
 # Plot data
-mdf <- model.frame(mod.nb)
-model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef),
-                                          days=as.numeric(as.character(levels(factor(mdf$`sp(days)`[,1]))))),
-                              mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=mean)$x,
-                              sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$`sp(days)`[,1])), FUN=sd)$x)
+mdf.nb <- model.frame(mod.nb)
+mdf.nb.summ <- data.frame(expand.grid(reef=levels(mdf.nb$reef),
+                                          days=as.numeric(as.character(levels(factor(mdf.nb$`sp(days)`[,1]))))),
+                              mean=aggregate(mdf.nb$`log(tot.SH)`, by=list(interaction(mdf.nb$reef, mdf.nb$`sp(days)`[,1])), FUN=mean)$x,
+                              sd=aggregate(mdf.nb$`log(tot.SH)`, by=list(interaction(mdf.nb$reef, mdf.nb$`sp(days)`[,1])), FUN=sd)$x)
 
-model.data.summ <- split(model.data.summ, f=model.data.summ$reef)
-# PLOTTT
+mdf.nb.summ <- split(mdf.nb.summ, f=mdf.nb.summ$reef)
+# Figure --------------
 layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
 par(mar=c(0,2,0,0))
-with(model.data.summ$"44", {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+with(mdf.nb.summ$"44", {
+  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.nb$"44", lines(days, pred))
   with(newdat.nb$"44", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
-with(model.data.summ$"25", {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+with(mdf.nb.summ$"25", {
+  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.nb$"25", lines(days, pred))
   with(newdat.nb$"25", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
-with(model.data.summ$"HIMB", {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
+with(mdf.nb.summ$"HIMB", {
+  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.nb$"HIMB", lines(days, pred))
   with(newdat.nb$"HIMB", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+plot(NA, ylim=c(-5,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
 with(newdat.nb$"HIMB", {
@@ -438,47 +438,47 @@ with(newdat.nb$"44", {
   lines(days, pred)
   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
 })
-# Plot D's
-par(mar=c(0,2,0,0))
-with(model.data.summ$"44.D", {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat.nb$"44.D", lines(days, pred))
-  with(newdat.nb$"44.D", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-par(mar=c(0,2,0,0))
-with(model.data.summ$"25.D", {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.nb$"25.D", lines(days, pred))
-  with(newdat.nb$"25.D", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-par(mar=c(0,2,0,0))
-with(model.data.summ$"HIMB.D", {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.nb$"HIMB.D", lines(days, pred))
-  with(newdat.nb$"HIMB.D", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
-})
-par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
-mtext(side=3, text = "Days", line=2.5, cex=0.75)
-box(lty=2, col=alpha("black", 0.8))
-with(newdat.nb$"HIMB.D", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("red", 0.3))
-})
-with(newdat.nb$"25.D", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("blue", 0.3))
-})
-with(newdat.nb$"44.D", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
-})
+# # Plot D's
+# par(mar=c(0,2,0,0))
+# with(model.data.summ$"44.D", {
+#   plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+#   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
+#   with(newdat.nb$"44.D", lines(days, pred))
+#   with(newdat.nb$"44.D", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+#   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+# })
+# par(mar=c(0,2,0,0))
+# with(model.data.summ$"25.D", {
+#   plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+#   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+#   with(newdat.nb$"25.D", lines(days, pred))
+#   with(newdat.nb$"25.D", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+#   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+# })
+# par(mar=c(0,2,0,0))
+# with(model.data.summ$"HIMB.D", {
+#   plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
+#   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+#   with(newdat.nb$"HIMB.D", lines(days, pred))
+#   with(newdat.nb$"HIMB.D", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+#   rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+# })
+# par(mar=c(1,2,5,0))
+# plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+# mtext(side=3, text = "Days", line=2.5, cex=0.75)
+# box(lty=2, col=alpha("black", 0.8))
+# with(newdat.nb$"HIMB.D", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("red", 0.3))
+# })
+# with(newdat.nb$"25.D", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("blue", 0.3))
+# })
+# with(newdat.nb$"44.D", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
+# })
 
 
 
