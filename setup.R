@@ -70,7 +70,7 @@ Mcap.plates <- list.files(path="qPCRdata", pattern="csv$", full.names=T)
 
 # Read in data and calculate S/H ratios
 Mcap <- qPCR(Mcap.plates, sym.target=list("C", "D"), host.target="Mcap",
-             fluor.norm=list(C=0, D=0, Mcap=0),
+             fluor.norm=list(C=2.26827, D=0, Mcap=0.84815),
              sym.copy.number=list(C=1, D=1), host.copy.number=1,
              sym.ploidy=1, host.ploidy=2,
              sym.extract=0.813, host.extract=0.982)
