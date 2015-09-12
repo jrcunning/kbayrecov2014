@@ -1,56 +1,32 @@
 # Import data
-file <- "20150907_KBayRecov_Mcap_copynumber_data.csv"
+#file <- "20150907_KBayRecov_Mcap_copynumber_data.csv"
+file <- "20150911_KBayRecov_Mcap_copyno_1_data.csv"
 cn <- read.csv(file, skip=6, na.strings="Undetermined")[, c(2:4, 7, 10)]
 cn <- split(cn, f=cn$Task)
 cn <- lapply(cn, droplevels)
 
-# Plot standard curves with Quantity as response variable
-plot(log10(Quantity) ~ C_, data=cn$STANDARD, col=c("blue", "red")[cn$STANDARD$Target.Name])
-
-# Fit standard curve model
-std <- lm(log10(Quantity) ~ C_ + Target.Name, data=cn$STANDARD)
-anova(std)  # No difference between Targets (b/c different automatic CT thresholds for C and D)
-std <- lm(log10(Quantity) ~ C_, data=cn$STANDARD)
-# Remove outliers with residuals > 2 s.d.'s from fit
-out <- romr.fnc(std, data=cn$STANDARD, trim=2)
-std <- update(std, data=out$data)
-summary(std)
-
-# Plot data without outliers
-stddat <- model.frame(std)
-plot(`log10(Quantity)` ~ C_, data=stddat, col=c("blue", "red")[cn$STANDARD$Target.Name])
-
-# Plot fitted values
-stdcurve <- data.frame(C_=seq(15,35,1))
-stdcurve$fit <- predict(std, stdcurve)
-with(stdcurve, lines(C_, fit))
-
-# Calculate unknown quantities based on standard curve
-cn$UNKNOWN$fit <- 10^predict(std, cn$UNKNOWN)
-cn$UNKNOWN
-hist(cn$UNKNOWN$C_)
-
-# Restructure data
+# Restructure data #################
+library(reshape2)
 cndat <- dcast(cn$UNKNOWN, formula = Sample.Name ~ Target.Name, value.var="Quantity", fun.aggregate = mean)
-cndat$Sample <- substr(cndat$Sample.Name, 5, 7)
+cndat <- data.frame(colsplit(cndat$Sample.Name, "-", names=c("colony", "extract.rep")), cndat[, -1])
 cndat
 
 # Import cell count data
 cells <- read.csv("cells.csv")
-cells$cells <- cells$cells.mL * 0.5 * (100/1000) * 0.955 * (1/50)  # Actual # of cells going into reaction
+cells$cells.µL <- cells$extract.cells * 0.955 /50  # Calculate cells per µL given 95.5% extraction efficiency and 50 µL elution volume
+cells$cells.µL
 
-final <- merge(cndat, cells, by="Sample")
-final[is.na(final)] <- 0
+# Merge copies and cells data
+cndat <- merge(cndat, cells, by="colony")
+cndat[is.na(cndat)] <- 0
 
-#D <- final[which(final$C==0), ]
-#final <- D
-#mean(final$D / final$cells)
+
 
 # Singular value decomposition
-copies<-as.matrix(final[,3:4])
+copies<-as.matrix(cndat[,3:4])
 copies[is.na(copies)] <- 0
 copies
-cells<-as.matrix(final[,6])
+cells<-as.matrix(cndat[,6])
 cells
 
 svd<-svd(copies)
@@ -63,21 +39,4 @@ x=svd$v%*%wp%*%t(svd$u)%*%cells
 copynumber=1/x
 copynumber
 
-#----------
-# Restructure data
-cndat <- dcast(cn$UNKNOWN, formula = Sample.Name ~ Target.Name, value.var="C_", fun.aggregate = mean)
-cndat$Sample <- substr(cndat$Sample.Name, 5, 7)
-cndat
 
-cells <- read.csv("cells.csv")
-cells$cells <- cells$cells.mL * 0.5 * (100/1000) * 0.955 * (1/50)  # Actual # of cells going into reaction
-
-final <- merge(cndat, cells, by="Sample")
-final[is.na(final)] <- 0
-final
-
-D <- final[which(final$D < final$C), ]
-final <- D
-final <- final[-c(2, 4), ]
-
-plot(D ~ log(cells, 2), final)
