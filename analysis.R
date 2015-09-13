@@ -159,19 +159,19 @@ Mcap.f.summ <- unique(Mcap.f.oct[, c("sample", "vis", "reef", "dom", "tdom")])
 
 # Figure: dominant symbiont clades of bleached and unbleached colonies at each reef
 par(mfrow=c(1, 3), mar=c(3,3,3,3))    #USE TDOM OR Oct-DOM???????  NEED TO CORRECT FOR COPY # FIRST.
-plot(dom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="HIMB"), ],
+plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="HIMB"), ],
      xlab="visual", ylab="dominant clade", main="HIMB")
-plot(dom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="25"), ],
+plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="25"), ],
      xlab="visual", ylab="", main="25")
-plot(dom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="44"), ],
+plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="44"), ],
      xlab="visual", ylab="", main="44")
 
 # Logistic regression testing effect of visual appearance and reef on dominant clade
 model <- glm(dom ~ vis + reef, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")  # vis and reef are significant, but not interaction
 par(mfrow=c(1,2))
-plot(tdom ~ vis, data=Mcap.f.summ)  # 100% of bleached colonies were clade C; 57% of notbleached were D
-plot(tdom ~ reef, data=Mcap.f.summ)  # HIMB has more clade D colonies (9/20) than 25&44 (4/20 each)
+plot(dom ~ vis, data=Mcap.f.summ)  # 100% of bleached colonies were clade C; 57% of notbleached were D
+plot(dom ~ reef, data=Mcap.f.summ)  # HIMB has more clade D colonies (9/20) than 25&44 (4/20 each)
 #CONCLUSION: bleached are all clade C, not bleached may be clade C or D
 #            reefs 25 and 44 80% likely to be clade C, at HIMB, nearly 58/42
 
@@ -213,6 +213,10 @@ plot(vis ~ tdom, data=Mcap.f.summ)
 # =================================================================================================
 # • Bleached corals
 # -------------------------------------------------------------------------------------------------
+# - Figure: How bleached were corals in October-----------
+mod <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff)
+dropterm(mod, test="F")
+plot(effect("tdom:vis", mod))
 # - Figure: symbiont abundance over time by reef (plot raw data) ----------------
 Mcap.ff.b <- subset(Mcap.ff, vis=="bleached")
 # Visualize raw data / trajectories for each colony over time
@@ -248,7 +252,7 @@ newdat.b.octjan$uci <- apply(bootfit$t, 2, quantile, 0.95)
 # - Figure: symbiont abundance over recovery period only -------------------------------------------
 par(mfrow=c(1,1), oma=c(1,1,1,1), mar=c(2,2,2,2))
 with(newdat.b.octjan[newdat.b.octjan$reef=="HIMB", ], {
-  plot(pred ~ days, type="l", col="red", ylim=c(-3.25,1.5))
+  plot(pred ~ days, type="l", col="red", ylim=c(-6,-1))
   addpoly(days, lci, uci, col=alpha("red", 0.5))
 })
 with(newdat.b.octjan[newdat.b.octjan$reef=="25", ], {
@@ -302,7 +306,7 @@ with(model.data.summ$`44`, {
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.b$"44", lines(days, pred))
   with(newdat.b$"44", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$`25`, {
@@ -310,7 +314,7 @@ with(model.data.summ$`25`, {
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.b$"25", lines(days, pred))
   with(newdat.b$"25", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$`HIMB`, {
@@ -318,10 +322,10 @@ with(model.data.summ$`HIMB`, {
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.b$"HIMB", lines(days, pred))
   with(newdat.b$"HIMB", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -5, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-5,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
 with(newdat.b$"HIMB", {
@@ -345,21 +349,20 @@ Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
 Mcap.ff.nb <- droplevels(subset(Mcap.ff.nb, tdom!="CD"))  # Remove colony 40
 xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ sample, data=Mcap.ff.nb[order(Mcap.ff.nb$days), ],
        type = "o", layout=c(3, 2), main="not bleached colonies")
-
-# - Analysis: Piecewise linear regression over full time period (October to May) --------------------
+# - Analysis: symbiont abundance over full time series (October to May) --------------------
 # Subset data
 Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
 Mcap.ff.nb <- droplevels(subset(Mcap.ff.nb, tdom!="CD"))  # Remove mixed colony 40 for now
 # Build model
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
 mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
-mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * tdom * reef + (sp(days) | sample), data=Mcap.ff.nb)
+mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (sp(days) | sample), data=Mcap.ff.nb)
 anova(mod.nb, mod.nb2)  # Model with random intercept only is best
-splin <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
-mod.nb3 <- lmerTest::lmer(log(tot.SH) ~ splin(days) * tdom * reef + (1 | sample), data=Mcap.ff.nb)
-anova(mod.nb, mod.nb3)  # Quadratic fit is better
-mod.nb <- mod.nb  # Choose quadratic model with random intercept only
-dropterm(mod.nb, test="Chisq")  # FULL INT NOT SIG
+sp <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
+mod.nb3 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
+anova(mod.nb, mod.nb3)  # Quadratic fit is better, p = 0.04583
+mod.nb <- mod.nb3  # Choose linear model with random intercept only
+dropterm(mod.nb3, test="Chisq")  # FULL INT NOT SIG
 mod.nb4 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + tdom + reef + 
                             sp(days):tdom + sp(days):reef + tdom:reef +
                             (1 | sample), data=Mcap.ff.nb)
@@ -395,7 +398,7 @@ mdf.nb.summ <- data.frame(expand.grid(reef=levels(mdf.nb$reef),
                               sd=aggregate(mdf.nb$`log(tot.SH)`, by=list(interaction(mdf.nb$reef, mdf.nb$`sp(days)`[,1])), FUN=sd)$x)
 
 mdf.nb.summ <- split(mdf.nb.summ, f=mdf.nb.summ$reef)
-# Figure --------------
+# - Figure: symbiont abundance over full time series --------------
 layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
 par(mar=c(0,2,0,0))
@@ -489,7 +492,7 @@ with(newdat.nb$"44", {
 # -------------------------------------------------------------------------------------------------
 # • All corals
 # -------------------------------------------------------------------------------------------------
-# Build piecewise polynomial model with knot at 82 days (January time point)
+# Build piecewise polynomial model with knot at 82 days (January time point) -----------
 #   From October to January, fit a quadratic polynomial (1st element of degree=2)
 #   From January to May, fit a linear model (2nd element of degree=1)
 #   Function is continuous at time=82 days (smooth=0)
@@ -520,34 +523,34 @@ model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), vis=levels(mdf$
                               mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$vis, mdf$`sp(days)`[,1])), FUN=mean)$x,
                               sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$vis, mdf$`sp(days)`[,1])), FUN=sd)$x)
 model.data.summ <- split(model.data.summ, f=interaction(model.data.summ$reef, model.data.summ$vis))
-#PLOT
+# PLOT all corals----------------------------------------
 layout(mat=matrix(c(1,2,3,4,4,5,6,7,8,8), ncol=2))
 par(mgp=c(2,0.4,0), oma=c(1,1,1,1), mar=c(0,2,0,0))
 with(model.data.summ$"44.bleached", {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.all$"44.bleached", lines(days, pred))
   with(newdat.all$"44.bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$"25.bleached", {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"25.bleached", lines(days, pred))
   with(newdat.all$"25.bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$"HIMB.bleached", {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"HIMB.bleached", lines(days, pred))
   with(newdat.all$"HIMB.bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
 with(newdat.all$"HIMB.bleached", {
@@ -565,32 +568,108 @@ with(newdat.all$"44.bleached", {
 # Plot not bleached
 par(mar=c(0,2,0,0))
 with(model.data.summ$"44.not bleached", {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.all$"44.not bleached", lines(days, pred))
   with(newdat.all$"44.not bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$"25.not bleached", {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-4.1,2.4), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"25.not bleached", lines(days, pred))
   with(newdat.all$"25.not bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(0,2,0,0))
 with(model.data.summ$"HIMB.not bleached", {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-4.1,2.4), bty="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"HIMB.not bleached", lines(days, pred))
   with(newdat.all$"HIMB.not bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -3, xright = 82, ytop = 1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
 par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-3,1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
 mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=2, col=alpha("black", 0.8))
+with(newdat.all$"HIMB.not bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("red", 0.3))
+})
+with(newdat.all$"25.not bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("blue", 0.3))
+})
+with(newdat.all$"44.not bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
+})
+# Figure: Plot bleached and non-bleached on same panels------------
+layout(mat=matrix(c(1,2,3,4,4)))
+par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
+par(mar=c(0,2,0,0))
+with(model.data.summ$"44.bleached", {
+  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
+  with(newdat.all$"44.bleached", lines(days, pred))
+  with(newdat.all$"44.bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+})
+with(model.data.summ$"44.not bleached", {
+  points(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
+  with(newdat.all$"44.not bleached", lines(days, pred))
+  with(newdat.all$"44.not bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+})
+par(mar=c(0,2,0,0))
+with(model.data.summ$"25.bleached", {
+  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"25.bleached", lines(days, pred))
+  with(newdat.all$"25.bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+})
+with(model.data.summ$"25.not bleached", {
+  points(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"25.not bleached", lines(days, pred))
+  with(newdat.all$"25.not bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+})
+par(mar=c(0,2,0,0))
+with(model.data.summ$"HIMB.bleached", {
+  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"HIMB.bleached", lines(days, pred))
+  with(newdat.all$"HIMB.bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+})
+with(model.data.summ$"HIMB.not bleached", {
+  points(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"HIMB.not bleached", lines(days, pred))
+  with(newdat.all$"HIMB.not bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border=alpha("black", 0.8))
+})
+par(mar=c(1,2,5,0))
+plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
+mtext(side=3, text = "Days", line=2.5, cex=0.75)
+box(lty=3, col=alpha("black", 0.8))
+with(newdat.all$"HIMB.bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("red", 0.3))
+})
+with(newdat.all$"25.bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("blue", 0.3))
+})
+with(newdat.all$"44.bleached", {
+  lines(days, pred)
+  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
+})
 with(newdat.all$"HIMB.not bleached", {
   lines(days, pred)
   addpoly(days, lci, uci, col=alpha("red", 0.3))
@@ -607,10 +686,29 @@ with(newdat.all$"44.not bleached", {
 
 
 
-
-
-
-
+# BACK TRANSFORM------------------
+layout(mat=matrix(c(1,2,3,4,4)))
+par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
+par(mar=c(0,2,0,0))
+with(model.data.summ$"44.bleached", {
+  plot(exp(mean) ~ days, pch=21, bg="darkgreen", ylim=c(0,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, exp(mean+sd), days, exp(mean-sd), code=3, angle=90, length=0.05)
+  with(newdat.all$"44.bleached", lines(days, exp(pred)))
+  with(newdat.all$"44.bleached", addpoly(days, exp(lci), exp(uci), col=alpha("darkgreen", 0.3)))
+})
+with(model.data.summ$"25.bleached", {
+  plot(exp(mean) ~ days, pch=21, bg="blue", ylim=c(0,1), bty="n", xaxt="n", tck=-0.03)
+  arrows(days, exp(mean+sd), days, exp(mean-sd), code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"25.bleached", lines(days, exp(pred)))
+  with(newdat.all$"25.bleached", addpoly(days, exp(lci), exp(uci), col=alpha("blue", 0.3)))
+})
+par(mar=c(0,2,0,0))
+with(model.data.summ$"HIMB.bleached", {
+  plot(exp(mean) ~ days, pch=21, bg="red", ylim=c(0,1), bty="n", tck=-0.03)
+  arrows(days, exp(mean+sd), days, exp(mean-sd), code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"HIMB.bleached", lines(days, exp(pred)))
+  with(newdat.all$"HIMB.bleached", addpoly(days, exp(lci), exp(uci), col=alpha("red", 0.3)))
+})
 
 
 # Bleaching severity in October -- effect of symbiont clade and visual appearance------------
