@@ -22,60 +22,72 @@ addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
 }
 # -------------------------------------------------------------------------------------------------
 # • Load data -------------------------------------------------------------------------------------
-# Define data calling function
-qPCR <- function(files=list(), sym.target=list(), host.target=NULL, 
-                 fluor.norm=list(),
-                 sym.copy.number=list(), host.copy.number=1,
-                 sym.ploidy=1, host.ploidy=1,
-                 sym.extract=1, host.extract=1) {
-  require(plyr); require(reshape2)
-  data <- do.call("rbind", lapply(files, function(file) {
-    data.frame(Filename=file, read.csv(file, skip=6, na.strings="Undetermined")[, 1:17])
-  }))
-  # Remove rows with no Target specified (empty wells)
-  data <- data[which(data$Target.Name!=""), ]
-  data$Target.Name <- factor(as.character(data$Target.Name))
-  # Code unique sample-plate IDs to distinguish samples run on multiple plates
-  data$Sample.Run <- interaction(data$Filename, data$Sample.Name, sep="~")
-  # Calculate mean Ct values and SDs of each target for each sample run
-  ctmeans <- dcast(data, Sample.Run ~ Target.Name, mean, na.rm=F, value.var="C_")
-  ctmeans[is.na(ctmeans)] <- NA
-  colnames(ctmeans) <- c(colnames(ctmeans)[1], paste(colnames(ctmeans)[-1], "Ct.mean", sep="."))
-  ctsds <- dcast(data, Sample.Run ~ Target.Name, sd, na.rm=T, value.var="C_")
-  colnames(ctsds) <- c(colnames(ctsds)[1], paste(colnames(ctsds)[-1], "Ct.sd", sep="."))
-  # Calculate number of SD's away from mean of host Ct value for each sample run
-  mean.hostCt <- mean(data[which(data$Target.Name==host.target), "C_"], na.rm=T)
-  sd.hostCt <- sd(data[which(data$Target.Name==host.target), "C_"], na.rm=T)
-  data[which(data$Target.Name==host.target), "sd.hostCt"] <- 
-    (data[which(data$Target.Name==host.target), "C_"] - mean.hostCt) / sd.hostCt
-  sd.hostCt <- aggregate(data$sd.hostCt, by=list(Sample.Run=data$Sample.Run), FUN=mean, na.rm=T)
-  colnames(sd.hostCt)[2] <- paste(host.target, "dist.Ct.mean", sep=".")
-  # Combine Ct means, SDs, and host Ct distance
-  result <- join_all(list(ctmeans, ctsds, sd.hostCt))
-  # Split Sample.Run column into Run (filename) and Sample.Name columns
-  result <- cbind(colsplit(as.character(result$Sample.Run), pattern="~", names=c("Filename", "Sample.Name")),
-                  result[, -1])
-  for (sym in sym.target) {
-    sym.SH <- 2^((result[, paste(host.target, "Ct.mean", sep=".")] - fluor.norm[[host.target]]) - 
-                   (result[, paste(sym, "Ct.mean", sep=".")] - fluor.norm[[sym]]))
-    sym.SH <- sym.SH / (sym.copy.number[[sym]] / host.copy.number)  / (sym.ploidy / host.ploidy) / (sym.extract / host.extract)
-    sym.SH[is.na(sym.SH)] <- 0
-    result[, paste(sym, "SH", sep=".")] <- sym.SH
-  }
-  return(result)
-}
+# Define data calling function --------------------------------------------------------------------
+# qPCR <- function(files=list(), sym.target=list(), host.target=NULL, 
+#                  fluor.norm=list(),
+#                  sym.copy.number=list(), host.copy.number=1,
+#                  sym.ploidy=1, host.ploidy=1,
+#                  sym.extract=1, host.extract=1) {
+#   require(plyr); require(reshape2)
+#   data <- do.call("rbind", lapply(files, function(file) {
+#     data.frame(Filename=file, read.csv(file, skip=6, na.strings="Undetermined")[, 1:17])
+#   }))
+#   # Remove rows with no Target specified (empty wells)
+#   data <- data[which(data$Target.Name!=""), ]
+#   data$Target.Name <- factor(as.character(data$Target.Name))
+#   # Code unique sample-plate IDs to distinguish samples run on multiple plates
+#   data$Sample.Run <- interaction(data$Filename, data$Sample.Name, sep="~")
+#   # Calculate mean Ct values and SDs of each target for each sample run
+#   ctmeans <- dcast(data, Sample.Run ~ Target.Name, mean, na.rm=F, value.var="C_")
+#   ctmeans[is.na(ctmeans)] <- NA
+#   colnames(ctmeans) <- c(colnames(ctmeans)[1], paste(colnames(ctmeans)[-1], "Ct.mean", sep="."))
+#   ctsds <- dcast(data, Sample.Run ~ Target.Name, sd, na.rm=T, value.var="C_")
+#   colnames(ctsds) <- c(colnames(ctsds)[1], paste(colnames(ctsds)[-1], "Ct.sd", sep="."))
+#   # Calculate number of SD's away from mean of host Ct value for each sample run
+#   mean.hostCt <- mean(data[which(data$Target.Name==host.target), "C_"], na.rm=T)
+#   sd.hostCt <- sd(data[which(data$Target.Name==host.target), "C_"], na.rm=T)
+#   data[which(data$Target.Name==host.target), "sd.hostCt"] <- 
+#     (data[which(data$Target.Name==host.target), "C_"] - mean.hostCt) / sd.hostCt
+#   sd.hostCt <- aggregate(data$sd.hostCt, by=list(Sample.Run=data$Sample.Run), FUN=mean, na.rm=T)
+#   colnames(sd.hostCt)[2] <- paste(host.target, "dist.Ct.mean", sep=".")
+#   # Combine Ct means, SDs, and host Ct distance
+#   result <- join_all(list(ctmeans, ctsds, sd.hostCt))
+#   # Split Sample.Run column into Run (filename) and Sample.Name columns
+#   result <- cbind(colsplit(as.character(result$Sample.Run), pattern="~", names=c("Filename", "Sample.Name")),
+#                   result[, -1])
+#   for (sym in sym.target) {
+#     sym.SH <- 2^((result[, paste(host.target, "Ct.mean", sep=".")] - fluor.norm[[host.target]]) - 
+#                    (result[, paste(sym, "Ct.mean", sep=".")] - fluor.norm[[sym]]))
+#     sym.SH <- sym.SH / (sym.copy.number[[sym]] / host.copy.number)  / (sym.ploidy / host.ploidy) / (sym.extract / host.extract)
+#     sym.SH[is.na(sym.SH)] <- 0
+#     result[, paste(sym, "SH", sep=".")] <- sym.SH
+#   }
+#   return(result)
+# }
 
+# # Get list of plate files to read in
+# Mcap.plates <- list.files(path="qPCRdata", pattern="csv$", full.names=T)
+
+# # Read in data and calculate S/H ratios
+# Mcap <- qPCR(Mcap.plates, sym.target=list("C", "D"), host.target="Mcap",
+#              fluor.norm=list(C=2.26827, D=0, Mcap=0.84815),
+#              sym.copy.number=list(C=33, D=3), host.copy.number=1,
+#              sym.ploidy=1, host.ploidy=2,
+#              sym.extract=0.813, host.extract=0.982)
+# Mcap[which(Mcap$Sample.Name=="NTC"), ]   # Check NTC's
+# Mcap <- Mcap[-which(Mcap$Sample.Name=="NTC"), ]  # Remove NTC's
+
+# Use steponeR to import data and calculate S/H ratios --------------------------------------------
+source("~/Documents/Academia/HIMB/steponeR/steponeR.R")
 # Get list of plate files to read in
 Mcap.plates <- list.files(path="qPCRdata", pattern="csv$", full.names=T)
+Mcap <- steponeR(files=Mcap.plates, target.ratios=c("C.Mcap", "D.Mcap"),
+                 fluor.norm=list(C=2.26827, D=0, Mcap=0.84815),
+                 copy.number=list(C=33, D=3, Mcap=1),
+                 ploidy=list(C=1, D=1, Mcap=2), 
+                 extract=list(C=0.813, D=0.813, Mcap=0.982))
 
-# Read in data and calculate S/H ratios
-Mcap <- qPCR(Mcap.plates, sym.target=list("C", "D"), host.target="Mcap",
-             fluor.norm=list(C=2.26827, D=0, Mcap=0.84815),
-             sym.copy.number=list(C=33, D=3), host.copy.number=1,
-             sym.ploidy=1, host.ploidy=2,
-             sym.extract=0.813, host.extract=0.982)
-Mcap[which(Mcap$Sample.Name=="NTC"), ]   # Check NTC's
-Mcap <- Mcap[-which(Mcap$Sample.Name=="NTC"), ]  # Remove NTC's
+Mcap <- Mcap$result
 
 # Parse sample names and dates
 sample.names <- rbind.fill(lapply(strsplit(as.character(Mcap$Sample.Name), split="_"), 
@@ -85,9 +97,11 @@ Mcap <- cbind(sample.names, Mcap[, -2])
 Mcap$date <- factor(Mcap$date, levels=c("10.24", "11.04", "11.24", "12.16", "01.14", "05.06"))
 
 # Calculate total S/H ratio and D/C ratio
-Mcap$tot.SH <- Mcap$C.SH + Mcap$D.SH
-Mcap$rel.prod <- (Mcap$C.SH * 1 ) + (Mcap$D.SH * 0.5)
-Mcap$logDC <- log(Mcap$D.SH / Mcap$C.SH)
+colnames(Mcap)[which(colnames(Mcap) %in% c("C.Mcap", "D.Mcap"))] <- c("C.SH", "D.SH")  # Rename cols
+Mcap$C.SH[is.na(Mcap$C.SH)] <- 0
+Mcap$D.SH[is.na(Mcap$D.SH)] <- 0
+Mcap$tot.SH <- Mcap$C.SH + Mcap$D.SH  # Add C and D to get total SH
+Mcap$logDC <- log(Mcap$D.SH / Mcap$C.SH)  # Calculate logDC ratio
 
 # Identify symbiont clades present (C=C only, CD=C > D, DC=D > C, D=D only)
 Mcap$syms <- factor(ifelse(Mcap$C.SH > Mcap$D.SH, ifelse(Mcap$D.SH!=0, "CD", "C"), 
@@ -100,7 +114,7 @@ Mcap$C.SH[which(Mcap$C.SH==0)] <- NA
 Mcap$D.SH[which(Mcap$D.SH==0)] <- NA
 Mcap$tot.SH[which(Mcap$tot.SH==0)] <- NA
 
-table(is.na(Mcap$tot.SH))  # 8 SAMPLES HAVE NO DATA!!!!!!!!!!!!!
+table(is.na(Mcap$tot.SH))  # 5 SAMPLES HAVE NO DATA
 
 # Assign visual ID and reef location metadata
 Mcap$vis <- factor(ifelse(as.numeric(as.character(Mcap$sample)) %% 2 == 0, "not bleached", "bleached"))
@@ -129,7 +143,7 @@ filter.dups <- function(data) {
       # label sample by original extraction or reextraction
       sample$note <- ifelse(Vectorize(isTRUE)(sample$note=="reex"), "reex", "original")
       # get mean Mcap Ct's of original extraction and reextracted sample runs
-      meanMcap <- aggregate(sample$Mcap.Ct.mean,  
+      meanMcap <- aggregate(sample$Mcap.CT.mean,  
                             by=list(extract=sample$note), 
                             FUN=mean)
       # choose which extraction to keep based on which has lower mean Mcap Ct
@@ -139,7 +153,7 @@ filter.dups <- function(data) {
     }
     # If multiple runs of the original or re-extracted sample still exist, keep the run with
     #   the lowest average standard deviation of technical replicates of each target
-    sample <- sample[which.min(rowMeans(sample[, c("Mcap.Ct.sd", "C.Ct.sd", "D.Ct.sd")], na.rm=T)), ]
+    sample <- sample[which.min(rowMeans(sample[, c("Mcap.CT.sd", "C.CT.sd", "D.CT.sd")], na.rm=T)), ]
     # Collect runs to keep
     keep <- merge(keep, sample, all=T)
   }
