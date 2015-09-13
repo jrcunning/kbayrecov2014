@@ -13,16 +13,16 @@ library(merTools); library(devtools)
 #devtools::install("spida/pkg")
 library(spida)
 
-addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
+addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   ii <- order(x)
   y1 <- y1[ii]
   y2 <- y2[ii]
   x <- x[ii]
-  polygon(c(x,rev(x)), c(y1, rev(y2)), col=col, border=NA,...)
+  polygon(c(x, rev(x)), c(y1, rev(y2)), col=col, border=NA, ...)
 }
 # -------------------------------------------------------------------------------------------------
 # • Load data -------------------------------------------------------------------------------------
-# Define data calling function --------------------------------------------------------------------
+# # Manual data calling function to import data --------------------------------------------------------------------
 # qPCR <- function(files=list(), sym.target=list(), host.target=NULL, 
 #                  fluor.norm=list(),
 #                  sym.copy.number=list(), host.copy.number=1,
@@ -30,7 +30,7 @@ addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
 #                  sym.extract=1, host.extract=1) {
 #   require(plyr); require(reshape2)
 #   data <- do.call("rbind", lapply(files, function(file) {
-#     data.frame(Filename=file, read.csv(file, skip=6, na.strings="Undetermined")[, 1:17])
+#     data.frame(Filename=basename(file), read.csv(file, skip=6, na.strings="Undetermined")[, 1:17])
 #   }))
 #   # Remove rows with no Target specified (empty wells)
 #   data <- data[which(data$Target.Name!=""), ]
@@ -64,10 +64,10 @@ addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
 #   }
 #   return(result)
 # }
-
+# 
 # # Get list of plate files to read in
 # Mcap.plates <- list.files(path="qPCRdata", pattern="csv$", full.names=T)
-
+# 
 # # Read in data and calculate S/H ratios
 # Mcap <- qPCR(Mcap.plates, sym.target=list("C", "D"), host.target="Mcap",
 #              fluor.norm=list(C=2.26827, D=0, Mcap=0.84815),
@@ -76,6 +76,9 @@ addpoly <- function(x,y1,y2,col=alpha("lightgrey",0.8),...){
 #              sym.extract=0.813, host.extract=0.982)
 # Mcap[which(Mcap$Sample.Name=="NTC"), ]   # Check NTC's
 # Mcap <- Mcap[-which(Mcap$Sample.Name=="NTC"), ]  # Remove NTC's
+# colnames(Mcap) <- c("File.Name", "Sample.Name", "C.CT.mean", "D.CT.mean", "Mcap.CT.mean",
+#                     "C.CT.sd", "D.CT.sd", "Mcap.CT.sd", "Mcap.dist.CT.mean", "C.SH", "D.SH")
+# #Mcap.man <- Mcap
 
 # Use steponeR to import data and calculate S/H ratios --------------------------------------------
 source("~/Documents/Academia/HIMB/steponeR/steponeR.R")
@@ -88,8 +91,21 @@ Mcap <- steponeR(files=Mcap.plates, target.ratios=c("C.Mcap", "D.Mcap"),
                  extract=list(C=0.813, D=0.813, Mcap=0.982))
 
 Mcap <- Mcap$result
+#Mcap.so <- Mcap
+# If C or D only detected in one technical replicate, set its ratio to NA (becomes zero)
+Mcap$D.Mcap[which(Mcap$D.reps==1)] <- NA
+Mcap$C.Mcap[which(Mcap$C.reps==1)] <- NA
 
-# Parse sample names and dates
+
+# # WHY IS DATA NOT THE SAME WHEN IMPORTED TWO DIFFERENT WAYS? should be identical for D.CT.mean
+# m <- merge(Mcap.man[,c("Sample.Name", "File.Name", "D.SH")], 
+#            Mcap.so[,c("Sample.Name", "File.Name", "D.Mcap")],
+#            by=c("Sample.Name", "File.Name"))
+# m
+# Mcap.man[which(Mcap.man$Sample.Name=="52_11.24_reex"), ]
+# Mcap.so[which(Mcap.so$Sample.Name=="52_11.24_reex"), ]
+
+# Parse sample names and dates --------------------------------------------------------------------
 sample.names <- rbind.fill(lapply(strsplit(as.character(Mcap$Sample.Name), split="_"), 
                                   function(X) data.frame(t(X))))
 colnames(sample.names) <- c("sample", "date", "note")
@@ -192,6 +208,6 @@ Mcap.f$tdom <- dom[as.character(Mcap.f$sample), "dom"]
 # par(mar=c(5,3,0,1))
 # boxplot(Mcap.f$Mcap.Ct.mean,ylab="Ct value", horizontal=T, ylim=c(15,40), frame=F)
 # Remove samples with high outlying Mcap Ct values for quantitative analyses
-thresh <- boxplot.stats(Mcap.f$Mcap.Ct.mean)$stats[5]
-Mcap.ff <- Mcap.f[which(Mcap.f$Mcap.Ct.mean <= thresh), ]
+thresh <- boxplot.stats(Mcap.f$Mcap.CT.mean)$stats[5]
+Mcap.ff <- Mcap.f[which(Mcap.f$Mcap.CT.mean <= thresh), ]
 # -------------------------------------------------------------------------------------------------
