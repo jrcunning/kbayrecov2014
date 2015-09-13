@@ -10,19 +10,32 @@ set.seed(39059978)
 # =================================================================================================
 # PATTERNS IN DOMINANT SYMBIONTS AND BLEACHING
 # =================================================================================================
+# • Analysis: Symbiont clades in all samples and colonies across time points -----------------------------------
+symtab <- table(Mcap.f$syms)
+symtab2 <- c(symtab[1], symtab[2] + symtab[3], symtab[4])
+par(mfrow=c(2,1), mar=c(3,5,2,1))
+barplot(symtab2, ylab="Number of samples", xlab="Symbiont clades detected")
+clades <- aggregate(Mcap.f$syms, by=list(sample=Mcap.f$sample), FUN=paste, collapse="")
+clades$C[grep("C", clades$x)] <- "C"
+clades$D[grep("D", clades$x)] <- "D"
+clades$present <- ifelse(is.na(clades$C), ifelse(is.na(clades$D), "none", "D only"), ifelse(is.na(clades$D), "C only", "C+D"))
+barplot(table(clades$present), ylab="Number of colonies", xlab="Symbiont clades detected")
+compare <- data.frame(samples=prop.table(symtab2), colonies=matrix(prop.table(table(clades$present))))
+par(mfrow=c(1,1))
+barplot(as.matrix(compare), beside=F, ylab="Proportion")
 # • Analysis: Symbiont clades in each colony over time ------------------------------------------------------
-clades <- melt(Mcap.f, id.vars=c("sample", "date", "vis", "reef"), measure.vars="syms",
+clades <- melt(Mcap.f, id.vars=c("sample", "date", "vis", "reef", "tdom"), measure.vars="syms",
                factorsAsStrings=FALSE)
 # Create matrix for image function
 clades$value <- as.numeric(factor(clades$value))
-clades <- dcast(clades, vis + sample + reef ~ date, drop=T)
+clades <- dcast(clades, vis + sample + reef + tdom ~ date, drop=T)
 clades[is.na(clades)] <- -1  # Recode missing values as -1
-clades <- clades[with(clades, order(rev(vis), clades[, 4], clades[, 5], clades[, 6], 
-                                    clades[, 7], clades[, 8], clades[, 9])), ]
-clades.m <- as.matrix(clades[,4:9], row.names=as.character(clades$sample))
+clades <- clades[with(clades, order(rev(vis), tdom, clades[, 5], clades[, 6], clades[, 7], 
+                                    clades[, 8], clades[, 9], clades[, 10])), ]
+clades.m <- as.matrix(clades[,5:10], row.names=as.character(clades$sample))
 rownames(clades.m) <- as.character(clades$sample)
 # • Figure: Symbiont clades in each colony over time ----------------------------------------
-par(mar=c(5,7,3,1), bg="white")
+par(mfrow=c(1,1), mar=c(5,7,3,3), bg="white")
 image(x=seq(1,ncol(clades.m)), y=seq(1,nrow(clades.m)), z=t(clades.m), 
       xaxt="n", yaxt="n", xlab="", ylab="",
       breaks=c(-1,0,1,2,3,4,5),
@@ -45,6 +58,20 @@ for (i in 1:nrow(clades)) {
 }
 rect(par("usr")[1] - 1.25, par("usr")[3], par("usr")[1] - 0.25, par("usr")[4], xpd=T)
 lines(x=c(par("usr")[1] - 2.25, par("usr")[1] - 0.25), y=rep(quantile(par("usr")[3:4], 0.5), 2), xpd=T)
+# Plot tdom side boxes
+clades$tdom
+breaks <- c(0, which(diff(as.numeric(clades$tdom))!=0), length(clades$tdom))
+doms <- clades$tdom[breaks]
+for (i in 2:length(breaks)) {
+  rect(par("usr")[2] + 0.25, par("usr")[3] + breaks[i-1], par("usr")[2] + 0.75, par("usr")[3] + breaks[i], xpd=T)
+}
+for (i in 1:(length(breaks)-1)) {
+  text(par("usr")[2] + 0.5, (breaks[i] + breaks[i+1]) / 2, paste(doms[i], "dominant"), xpd=T, srt=90)
+}
+
+
+
+
 # Plot Row Side Color Key
 for (i in 1:3) {
   rect(par("usr")[1] - 1.25, quantile(par("usr")[3:4], 0) * -1.05 - ((i - 1) * 1),
@@ -152,11 +179,10 @@ text(x=c(quantile(par("usr")[1:2], c(0.045, 0.8636, 0.9545))),
      y=quantile(par("usr")[3:4], 0) * -1.05 - 3.25,
      labels = c("C only", "D only", "no data"), xpd=T, cex=0.5)
 # • Statistical tests of symbiont clade, reef, and visual status --------------------
-# NEED TO CORRECT FOR COPY NUMBER BEFORE ANY OF THIS IS VALID
 # Summarize data - reef, visual status, and dominant symbiont for each colony
 Mcap.f.oct <- Mcap.f[which(Mcap.f$fdate=="20141024"), ]
 Mcap.f.summ <- unique(Mcap.f.oct[, c("sample", "vis", "reef", "dom", "tdom")])
-
+Mcap.f.summ
 # Figure: dominant symbiont clades of bleached and unbleached colonies at each reef
 par(mfrow=c(1, 3), mar=c(3,3,3,3))    #USE TDOM OR Oct-DOM???????  NEED TO CORRECT FOR COPY # FIRST.
 plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="HIMB"), ],
@@ -595,7 +621,7 @@ with(newdat.all$"44.not bleached", {
   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
 })
 # Figure: Plot bleached and non-bleached on same panels------------
-pdf("recovplot.pdf", width=3.5, height=7)
+pdf("recovplot2.pdf", width=3.5, height=7)
 layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(1.75,0.4,0), oma=c(0,0,0,0))
 par(mar=c(0,3,0,1))
@@ -684,7 +710,7 @@ Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
 model <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
 anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
 plot(effect("tdom:vis", model))
-TukeyHSD(aov(model))  # BLEACHED C SAME AS NONBLEACHED D--- BECAUSE OF COPY NUMBER?
+TukeyHSD(aov(model))
 # Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
 
 
