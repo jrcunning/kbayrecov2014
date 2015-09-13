@@ -86,6 +86,7 @@ Mcap$date <- factor(Mcap$date, levels=c("10.24", "11.04", "11.24", "12.16", "01.
 
 # Calculate total S/H ratio and D/C ratio
 Mcap$tot.SH <- Mcap$C.SH + Mcap$D.SH
+Mcap$rel.prod <- (Mcap$C.SH * 1 ) + (Mcap$D.SH * 0.5)
 Mcap$logDC <- log(Mcap$D.SH / Mcap$C.SH)
 
 # Identify symbiont clades present (C=C only, CD=C > D, DC=D > C, D=D only)
