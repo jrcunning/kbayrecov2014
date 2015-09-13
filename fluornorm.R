@@ -5,7 +5,7 @@ fn <- read.csv(file, skip=6, na.strings="Undetermined")[, c(1:3, 7, 10)]
 fn <- droplevels(fn[which(fn$Sample.Name!=""), ])
 
 # Plot standard curves
-plot(C_ ~ log10(Quantity), data=fn, pch=21, bg=fn$Target.Name)
+plot(C_ ~ log10(Quantity), data=fn, pch=21, bg=fn$Target.Name, ylab="CT value")
 legend("topright", levels(fn$Target.Name), pch=21, pt.bg=factor(levels(fn$Target.Name)))
 
 # Sets clade D target as baseline contrast
