@@ -207,7 +207,8 @@ plot(vis ~ tdom, data=Mcap.f.summ)
 # CONCLUSION: visual bleaching depends on clade--70% of clade C colonies appeared bleached, while
 #             no clade D colonies appeared bleached
 # -------------------------------------------------------------------------------------------------
-
+Mcap.ff$tot.prod <- Mcap.ff$C.SH * 1 + Mcap.ff$D.SH * 0.5
+head(Mcap.ff)
 # =================================================================================================
 # QUANTITATIVE ANALYSIS OF SYMBIONT ABUNDANCE
 # =================================================================================================
@@ -354,29 +355,18 @@ xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ sample, data=Mcap.ff.nb[orde
 Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
 Mcap.ff.nb <- droplevels(subset(Mcap.ff.nb, tdom!="CD"))  # Remove mixed colony 40 for now
 # Build model
-sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
-mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
-mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (sp(days) | sample), data=Mcap.ff.nb)
+spq <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
+mod.nb <- lmerTest::lmer(log(tot.SH) ~ spq(days) * reef + (1 | sample), data=Mcap.ff.nb)
+mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ spq(days) * reef + (spq(days) | sample), data=Mcap.ff.nb)
 anova(mod.nb, mod.nb2)  # Model with random intercept only is best
+dropterm(mod.nb, test="Chisq")
 sp <- function(x) gsp(x, knots=c(82), degree=c(1,1), smooth=0)
 mod.nb3 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
-anova(mod.nb, mod.nb3)  # Quadratic fit is better, p = 0.04583
+anova(mod.nb, mod.nb3) # Quadratic fit is not better, p = 0.1979
+mod.nb4 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + reef + (1 | sample), data=Mcap.ff.nb)
+anova(mod.nb3, mod.nb4)  # model with reef*days interaction is almost sig. by LRT and has lower AIC--> keep
 mod.nb <- mod.nb3  # Choose linear model with random intercept only
-dropterm(mod.nb3, test="Chisq")  # FULL INT NOT SIG
-mod.nb4 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + tdom + reef + 
-                            sp(days):tdom + sp(days):reef + tdom:reef +
-                            (1 | sample), data=Mcap.ff.nb)
-mod.nb5 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + tdom + reef + 
-                            sp(days):tdom + sp(days):reef +
-                            (1 | sample), data=Mcap.ff.nb)
-mod.nb6 <- lmerTest::lmer(log(tot.SH) ~ sp(days) + reef + 
-                            (1 | sample), data=Mcap.ff.nb)
-mod.nb7 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * reef + (1 | sample), data=Mcap.ff.nb)
-anova(mod.nb6, mod.nb7)
-mod.nb8 <- lmerTest::lmer(log(tot.SH) ~ splin(days) + reef + (1 | sample), data=Mcap.ff.nb)
-anova(mod.nb6, mod.nb8)
-mod.nb <- mod.nb
-dropterm(mod.nb, test="Chisq")
+
 # Remove outliers with residuals > 2.5 s.d.'s from 0
 rm.outliers <- romr.fnc(mod.nb, Mcap.ff.nb, trim=2.5)
 rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]  # which data points are removed
@@ -608,80 +598,86 @@ with(newdat.all$"44.not bleached", {
 })
 # Figure: Plot bleached and non-bleached on same panels------------
 layout(mat=matrix(c(1,2,3,4,4)))
-par(mgp=c(2,0.4,0), oma=c(1,1,1,1))
-par(mar=c(0,2,0,0))
+par(mgp=c(1.75,0.4,0), oma=c(0,0,0,0))
+par(mar=c(0,3,0,1))
 with(model.data.summ$"44.bleached", {
-  plot(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg=alpha("darkgreen", 0.2), ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03, 
+       ylab="ln S/H")
+  title("Reef 44", line=-1.5, adj=0.9)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
-  with(newdat.all$"44.bleached", lines(days, pred))
+  with(newdat.all$"44.bleached", lines(days, pred, lty=2))
   with(newdat.all$"44.bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"44.not bleached", {
   points(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.all$"44.not bleached", lines(days, pred))
   with(newdat.all$"44.not bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
-par(mar=c(0,2,0,0))
+par(mar=c(0,3,0,1))
 with(model.data.summ$"25.bleached", {
-  plot(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg=alpha("blue", 0.2), ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03, ylab="ln S/H")
+  title("Reef 25", line=-1.5, adj=0.9)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.all$"25.bleached", lines(days, pred))
+  with(newdat.all$"25.bleached", lines(days, pred, lty=2))
   with(newdat.all$"25.bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"25.not bleached", {
   points(mean ~ days, pch=21, bg="blue", ylim=c(-7,1), bty="n", xaxt="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"25.not bleached", lines(days, pred))
   with(newdat.all$"25.not bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
 })
-par(mar=c(0,2,0,0))
+par(mar=c(0,3,0,1))
 with(model.data.summ$"HIMB.bleached", {
-  plot(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
+  plot(mean ~ days, pch=21, bg=alpha("red", 0.2), ylim=c(-7,1), bty="n", tck=-0.03, xaxt="n", ylab="ln S/H")
+  title("HIMB", line=-1.5, adj=0.9)
+  axis(side=1, at=as.numeric(as.Date(c("2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", 
+                                       "2015-03-01", "2015-04-01", "2015-05-01")) - as.Date("2014-10-24")),
+       labels=c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"))
+  
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
-  with(newdat.all$"HIMB.bleached", lines(days, pred))
+  with(newdat.all$"HIMB.bleached", lines(days, pred, lty=2))
   with(newdat.all$"HIMB.bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 2, border=alpha("black", 0.8))
+  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"HIMB.not bleached", {
   points(mean ~ days, pch=21, bg="red", ylim=c(-7,1), bty="n", tck=-0.03)
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"HIMB.not bleached", lines(days, pred))
   with(newdat.all$"HIMB.not bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
-  rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border=alpha("black", 0.8))
 })
-par(mar=c(1,2,5,0))
-plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n")
-mtext(side=3, text = "Days", line=2.5, cex=0.75)
-box(lty=3, col=alpha("black", 0.8))
+par(mar=c(1,3,5,1))
+plot(NA, ylim=c(-6,-1), xlim=c(0,82), xaxt="n", yaxt="n", xaxs="i", yaxs="i", bty="n", ylab="", xlab="")
+title("Close-up: recovery of\nbleached corals", adj=0, line=-2)
+#mtext(side=3, text = "Days", line=2.5, cex=0.75)
+box(lty=3, col="black")
 with(newdat.all$"HIMB.bleached", {
-  lines(days, pred)
+  lines(days, pred, lty=2)
   addpoly(days, lci, uci, col=alpha("red", 0.3))
 })
 with(newdat.all$"25.bleached", {
-  lines(days, pred)
+  lines(days, pred, lty=2)
   addpoly(days, lci, uci, col=alpha("blue", 0.3))
 })
 with(newdat.all$"44.bleached", {
-  lines(days, pred)
+  lines(days, pred, lty=2)
   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
 })
-with(newdat.all$"HIMB.not bleached", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("red", 0.3))
-})
-with(newdat.all$"25.not bleached", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("blue", 0.3))
-})
-with(newdat.all$"44.not bleached", {
-  lines(days, pred)
-  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
-})
+# with(newdat.all$"HIMB.not bleached", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("red", 0.3))
+# })
+# with(newdat.all$"25.not bleached", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("blue", 0.3))
+# })
+# with(newdat.all$"44.not bleached", {
+#   lines(days, pred)
+#   addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
+# })
 
 
 
