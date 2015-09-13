@@ -125,12 +125,21 @@ Mcap.f <- filter.dups(Mcap)
 # boxplot(Mcap.f[, c("Mcap.Ct.sd", "C.Ct.sd", "D.Ct.sd")], horizontal=T, las=2, ylim=c(0,5),
 #         main="Filtered runs")
 
-# Identify overall dominant symbiont clade across time points
+# Identify overall dominant symbiont clade across time points based on frequency of dominance
 syms <- ldply(split(Mcap.f[, "dom"], f = Mcap.f$sample), table)
 dom <- apply(syms, 1, FUN=function(x) ifelse(x[2] > x[3], "C", ifelse(x[3] > x[2], "D", "CD")))
 dom <- cbind(syms, dom)
 rownames(dom) <- dom$".id"
 Mcap.f$tdom <- dom[as.character(Mcap.f$sample), "dom"]
+# two colonies dominated equal number of times by C or D -- for these, take mean logDC to define tdom
+with(Mcap.f[which(Mcap.f$tdom=="CD"), ], {
+  aggregate(logDC, by=list(sample), FUN=mean)  
+})  # both are negative, showing C more dominant on average
+Mcap.f[which(Mcap.f$sample %in% c(40, 92)), "tdom"] <- "C"
+Mcap.f <- droplevels(Mcap.f)
+
+
+
 # -------------------------------------------------------------------------------------------------
 # • Filter low quality data for quantitative analyses (samples with delayed host amplification) -----------------
 # # Visualize distribution of Mcap Ct values
