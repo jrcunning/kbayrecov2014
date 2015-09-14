@@ -8,7 +8,7 @@ source("setup.R")
 set.seed(39059978)
 
 # =================================================================================================
-# PATTERNS IN DOMINANT SYMBIONTS AND BLEACHING
+# DOMINANT SYMBIONTS AND BLEACHING
 # =================================================================================================
 # • Analysis: Symbiont clades in all samples and colonies across time points ----------------------
 # Presence/absence of C and D
@@ -31,14 +31,14 @@ propD[is.na(propD)] <- 1
 symcols <- rev(brewer.pal(11, "RdYlBu")[c(2,1,3,9,11)])
 par(mfrow=c(1,2), mar=c(2,3,2,1), mgp=c(1.75,0.25,0), lwd=1)
 b1 <- barplot(as.matrix(compare), beside=F, ylab="Proportion", space=0.5, 
-              col = c("black", "gray", "white"), cex.names = 1, cex.axis=0.8)
+              col = c("gray20", "gray", "white"), cex.names = 1, cex.axis=0.8)
 text(b1, par("usr")[4], pos=3, xpd=T,
      labels = paste("n=", c(length(clades$present), sum(symtab2)), sep=""))
 save1.x <- grconvertX(par("usr")[2], from='user', to='ndc')
 save1.y <- grconvertY(compare[1,2], from='user', to='ndc')
 save2.y <- grconvertY(compare[1,2] + compare[2,2], from="user", to="ndc")
-legend(x=c(3.25,6), y=c(0,0.2), legend=c("D only", "C and D", "C only"), xpd=NA, cex=0.8,
-       fill=c("white", "gray", "black"), bty="n")
+legend(x=c(3.25,6), y=c(0,0.2), legend=c("D only", "C and D", "C only"), xpd=NA, cex=1,
+       fill=c("white", "gray", "gray20"), bty="n")
 par(mar=c(10,2,2,4))
 hist(propD[which(propD > 0 & propD < 1)], breaks=c(0,0.25,0.5,0.75,1), plot=T,
      main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray")
@@ -53,9 +53,37 @@ segments(x0 = par("usr")[1], y0 = par("usr")[3],
 segments(x0 = par("usr")[1], y0 = par("usr")[4], 
          x1 = grconvertX(save1.x, from='ndc'), 
          y1 = grconvertY(save2.y, from='ndc'), lty=1, xpd=NA)
-
-
-
+# • Analysis and Figure: Statistical tests of symbiont clade, reef, and visual status --------------------
+# Summarize data - reef, visual status, and dominant symbiont for each colony
+Mcap.f.summ <- unique(Mcap.f[, c("sample", "vis", "reef", "tdom")])
+# Logistic regression testing effect of visual appearance and reef on dominant clade
+model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
+anova(model, test="Chisq")  # only vis is significant
+model <- glm(tdom ~ vis, data=Mcap.f.summ, family=binomial(link="logit"))
+anova(model, test="Chisq")
+par(mfrow=c(1,2), mar=c(5,4,2,2), mgp=c(2.5,0.5,0))
+plot(tdom ~ vis, data=Mcap.f.summ,  # 100% of bleached colonies were clade C; 57% of notbleached were D
+     axes=F, ylab="Proportion of colonies", xlab="Visual diagnosis")
+axis(side=2, line=0.3)
+axis(side=1, at=quantile(par("usr")[1:2], c(0.25,0.75)), labels=c("Bleached", "Healthy"), cex.axis=1)
+legend(c(1,1.2),c(0.8,1.0), legend=c("D", "C"), fill=c("gray90", "gray30"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
+#CONCLUSION: bleached are all clade C, not bleached may be clade C or D 50/50
+# Bleaching severity in October -- effect of symbiont clade and visual appearance
+Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
+model <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
+anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
+#plot(effect("tdom:vis", model))
+eff <- data.frame(effect("tdom:vis", model))[c(1,3,4), ]
+TukeyHSD(aov(model))
+# Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
+par(mgp=c(2,0.5,0), mar=c(5,5,2,3))
+plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i",
+     pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="")
+mtext(side=2, "ln S/H", line=3)
+arrows(c(1,2,3), eff$lower, c(1,2,3), eff$upper, code=3, angle=90, length=0.1, xpd=T)
+axis(side=1, at=c(1,2,3), labels=NA)
+text(c(1,2,3), par("usr")[3] - 0.5, xpd=T, srt=45, pos=1,
+     labels=c("Bleached (C)", "Healthy (C)", "Healthy (D)"))
 # • Analysis: Symbiont clades in each colony over time ------------------------------------------------------
 clades <- melt(Mcap.f, id.vars=c("sample", "date", "vis", "reef", "tdom"), measure.vars="syms",
                factorsAsStrings=FALSE)
@@ -211,50 +239,10 @@ lines(x=rep(quantile(par("usr")[1:2], 0.8636), 2),
 text(x=c(quantile(par("usr")[1:2], c(0.045, 0.8636, 0.9545))),
      y=quantile(par("usr")[3:4], 0) * -1.05 - 3.25,
      labels = c("C only", "D only", "no data"), xpd=T, cex=0.5)
-# • Statistical tests of symbiont clade, reef, and visual status --------------------
-# Summarize data - reef, visual status, and dominant symbiont for each colony
-Mcap.f.summ <- unique(Mcap.f[, c("sample", "vis", "reef", "tdom")])
-# Figure: dominant symbiont clades of bleached and unbleached colonies at each reef
-par(mfrow=c(1, 3), mar=c(3,3,3,3))
-plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="HIMB"), ],
-     xlab="visual", ylab="dominant clade", main="HIMB")
-plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="25"), ],
-     xlab="visual", ylab="", main="25")
-plot(tdom ~ vis, Mcap.f.summ[which(Mcap.f.summ$reef=="44"), ],
-     xlab="visual", ylab="", main="44")
 
-# Logistic regression testing effect of visual appearance and reef on dominant clade
-model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
-anova(model, test="Chisq")  # only vis is significant
-model <- glm(tdom ~ vis, data=Mcap.f.summ, family=binomial(link="logit"))
-anova(model, test="Chisq")
-par(mfrow=c(1,1))
-plot(tdom ~ vis, data=Mcap.f.summ)  # 100% of bleached colonies were clade C; 57% of notbleached were D
-#CONCLUSION: bleached are all clade C, not bleached may be clade C or D 50/50
-
-
-
-
-##Ho: Visual appearance did not depend on symbiont clade
-##Ha: Visual appearance was linked to symbiont clade 
-par(mfrow=c(1,3))
-plot(vis ~ tdom, Mcap.f.summ[which(Mcap.f.summ$reef=="HIMB"), ],
-     xlab="dominant clade", ylab="visual", main="HIMB")
-plot(vis ~ tdom, Mcap.f.summ[which(Mcap.f.summ$reef=="25"), ],
-     xlab="dominant clade", ylab="", main="25")
-plot(vis ~ tdom, Mcap.f.summ[which(Mcap.f.summ$reef=="44"), ],
-     xlab="dominant clade", ylab="", main="44")
-# Logistic regression testing effect of clade and reef on visual appearance
-model <- glm(vis ~ tdom * reef, data=Mcap.f.summ, family=binomial(link="logit"))
-anova(model, test="Chisq")  # symbiont clade is significant
-model <- glm(vis ~ tdom, data=Mcap.f.summ, family=binomial(link="logit"))
-par(mfrow=c(1,1))
-plot(vis ~ tdom, data=Mcap.f.summ)
-# CONCLUSION: visual bleaching depends on clade--70% of clade C colonies appeared bleached, while
-#             no clade D colonies appeared bleached
 # -------------------------------------------------------------------------------------------------
 # =================================================================================================
-# QUANTITATIVE ANALYSIS OF SYMBIONT ABUNDANCE
+# RECOVERY
 # =================================================================================================
 # • Bleached corals
 # -------------------------------------------------------------------------------------------------
@@ -725,13 +713,7 @@ dev.off()
 
 
 
-# Bleaching severity in October -- effect of symbiont clade and visual appearance------------
-Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
-model <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
-anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
-plot(effect("tdom:vis", model))
-TukeyHSD(aov(model))
-# Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
+
 
 
 
