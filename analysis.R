@@ -61,6 +61,7 @@ model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")  # only vis is significant
 model <- glm(tdom ~ vis, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")
+# • Figure 2: Relationship between symbiont community and bleaching -------------------------------
 par(mfrow=c(1,2), mar=c(5,4,2,2), mgp=c(2.5,0.5,0))
 plot(tdom ~ vis, data=Mcap.f.summ,  # 100% of bleached colonies were clade C; 57% of notbleached were D
      axes=F, ylab="Proportion of colonies", xlab="Visual diagnosis")
@@ -76,7 +77,6 @@ anova(model, test="F")  # tdom:vis significant, (reef is not significant if incl
 eff <- data.frame(effect("tdom:vis", model))[c(1,3,4), ]
 TukeyHSD(aov(model))
 # Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
-# • Figure 2: Relationship between symbiont community and bleaching -------------------------------
 par(mgp=c(2,0.5,0), mar=c(5,5,2,3))
 plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i",
      pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="")
@@ -195,58 +195,63 @@ model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), vis=levels(mdf$
                               sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$vis, mdf$`sp(days)`[,1])), FUN=sd)$x)
 model.data.summ <- split(model.data.summ, f=interaction(model.data.summ$reef, model.data.summ$vis))
 # • Figure 4: Recovery dynamics at different reefs --------------------------------------------------
+reefcols <- c("#bebada", "#8dd3c7", "#d9d9d9")
+reefcols <- c("blue", "darkgreen", "red")
 pdf("recovplot2.pdf", width=3.5, height=7)
 layout(mat=matrix(c(1,2,3,4,4)))
 par(mgp=c(1.75,0.4,0), oma=c(0,0,0,0))
 par(mar=c(0,3,0,1))
 with(model.data.summ$"44.bleached", {
-  plot(mean ~ days, pch=21, bg=alpha("darkgreen", 0.2), ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03, 
+  plot(mean ~ days, type="n", ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03, 
        ylab="ln S/H")
   title("Reef 44", line=-1.5, adj=0.9)
+  with(newdat.all$"44.bleached", addpoly(days, lci, uci, col=alpha(reefcols[2], 0.3)))
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.all$"44.bleached", lines(days, pred, lty=2))
-  with(newdat.all$"44.bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+  points(mean ~ days, pch=24, bg=reefcols[2], ylim=c(-7,0.75), bty="n", tck=-0.03)
   rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"44.not bleached", {
-  points(mean ~ days, pch=21, bg="darkgreen", ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03)
+  with(newdat.all$"44.not bleached", addpoly(days, lci, uci, col=alpha(reefcols[2], 0.3)))
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05)
   with(newdat.all$"44.not bleached", lines(days, pred))
-  with(newdat.all$"44.not bleached", addpoly(days, lci, uci, col=alpha("darkgreen", 0.3)))
+  points(mean ~ days, pch=21, bg=reefcols[2], ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03)
 })
 par(mar=c(0,3,0,1))
 with(model.data.summ$"25.bleached", {
-  plot(mean ~ days, pch=21, bg=alpha("blue", 0.2), ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03, ylab="ln S/H")
+  plot(mean ~ days, type="n", ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03, ylab="ln S/H")
   title("Reef 25", line=-1.5, adj=0.9)
+  with(newdat.all$"25.bleached", addpoly(days, lci, uci, col=alpha(reefcols[1], 0.3)))
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"25.bleached", lines(days, pred, lty=2))
-  with(newdat.all$"25.bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+  points(mean ~ days, pch=24, bg=reefcols[1], ylim=c(-7,0.75), bty="n", tck=-0.03)
   rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"25.not bleached", {
-  points(mean ~ days, pch=21, bg="blue", ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03)
+  with(newdat.all$"25.not bleached", addpoly(days, lci, uci, col=alpha(reefcols[1], 0.3)))
   arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
   with(newdat.all$"25.not bleached", lines(days, pred))
-  with(newdat.all$"25.not bleached", addpoly(days, lci, uci, col=alpha("blue", 0.3)))
+  points(mean ~ days, pch=21, bg=reefcols[1], ylim=c(-7,0.75), bty="n", xaxt="n", tck=-0.03)
 })
 par(mar=c(0,3,0,1))
 with(model.data.summ$"HIMB.bleached", {
-  plot(mean ~ days, pch=21, bg=alpha("red", 0.2), ylim=c(-7,0.75), bty="n", tck=-0.03, xaxt="n", ylab="ln S/H")
+  plot(mean ~ days, type="n", ylim=c(-7,0.75), bty="n", tck=-0.03, xaxt="n", ylab="ln S/H")
   title("HIMB", line=-1.5, adj=0.9)
   axis(side=1, at=as.numeric(as.Date(c("2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", 
                                        "2015-03-01", "2015-04-01", "2015-05-01")) - as.Date("2014-10-24")),
        labels=c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"))
   
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"HIMB.bleached", addpoly(days, lci, uci, col=alpha(reefcols[3], 0.3)))
   with(newdat.all$"HIMB.bleached", lines(days, pred, lty=2))
-  with(newdat.all$"HIMB.bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  points(mean ~ days, pch=24, bg=reefcols[3], ylim=c(-7,0.75), bty="n", tck=-0.03)
   rect(xleft = 0, ybottom = -6, xright = 82, ytop = -1, lty = 3, border="black")
 })
 with(model.data.summ$"HIMB.not bleached", {
-  points(mean ~ days, pch=21, bg="red", ylim=c(-7,0.75), bty="n", tck=-0.03)
-  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  with(newdat.all$"HIMB.not bleached", addpoly(days, lci, uci, col=alpha(reefcols[3], 0.3)))
   with(newdat.all$"HIMB.not bleached", lines(days, pred))
-  with(newdat.all$"HIMB.not bleached", addpoly(days, lci, uci, col=alpha("red", 0.3)))
+  arrows(days, mean+sd, days, mean-sd, code=3, angle=90, length=0.05, xpd=T)
+  points(mean ~ days, pch=21, bg=reefcols[3], ylim=c(-7,0.75), bty="n", tck=-0.03)
 })
 save1.x <- grconvertX(0, from='user', to='ndc' )
 save1.y <- grconvertY(-6, from='user', to='ndc' )
@@ -258,16 +263,16 @@ title("Close-up: recovery of\nbleached corals", adj=0, line=-2)
 #mtext(side=3, text = "Days", line=2.5, cex=0.75)
 box(lty=3, col="black")
 with(newdat.all$"HIMB.bleached", {
+  addpoly(days, lci, uci, col=alpha(reefcols[3], 0.3))
   lines(days, pred, lty=2)
-  addpoly(days, lci, uci, col=alpha("red", 0.3))
 })
 with(newdat.all$"25.bleached", {
+  addpoly(days, lci, uci, col=alpha(reefcols[1], 0.3))
   lines(days, pred, lty=2)
-  addpoly(days, lci, uci, col=alpha("blue", 0.3))
 })
 with(newdat.all$"44.bleached", {
+  addpoly(days, lci, uci, col=alpha(reefcols[2], 0.3))
   lines(days, pred, lty=2)
-  addpoly(days, lci, uci, col=alpha("darkgreen", 0.3))
 })
 # add zoom lines
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
