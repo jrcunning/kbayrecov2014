@@ -43,12 +43,13 @@ colnames(sample.names) <- c("sample", "date", "note")
 Mcap <- cbind(sample.names, Mcap[, -2])
 Mcap$date <- factor(Mcap$date, levels=c("10.24", "11.04", "11.24", "12.16", "01.14", "05.06"))
 
-# Calculate total S/H ratio and D/C ratio
+# Calculate total S/H ratio and D/C ratio and propD
 colnames(Mcap)[which(colnames(Mcap) %in% c("C.Mcap", "D.Mcap"))] <- c("C.SH", "D.SH")  # Rename cols
 Mcap$C.SH[is.na(Mcap$C.SH)] <- 0
 Mcap$D.SH[is.na(Mcap$D.SH)] <- 0
 Mcap$tot.SH <- Mcap$C.SH + Mcap$D.SH  # Add C and D to get total SH
 Mcap$logDC <- log(Mcap$D.SH / Mcap$C.SH)  # Calculate logDC ratio
+Mcap$propD <- Mcap$D.SH / (Mcap$D.SH + Mcap$C.SH)
 
 # Identify symbiont clades present (C=C only, CD=C > D, DC=D > C, D=D only)
 Mcap$syms <- factor(ifelse(Mcap$C.SH > Mcap$D.SH, ifelse(Mcap$D.SH!=0, "CD", "C"), 
