@@ -22,27 +22,28 @@ clades$D[grep("D", clades$x)] <- "D"
 clades$present <- ifelse(is.na(clades$C), ifelse(is.na(clades$D), "none", "D only"), ifelse(is.na(clades$D), "C only", "C+D"))
 barplot(table(clades$present), ylab="Number of colonies", xlab="Symbiont clades detected")
 compare <- data.frame(Colonies=matrix(prop.table(table(clades$present))), Samples=prop.table(symtab2))
-# Proportion clade D
-logDC <- Mcap.f$logDC
-DC <- exp(logDC)
-propD <- DC/(DC + 1)
-propD[is.na(propD)] <- 1
+# # Proportion clade D
+# logDC <- Mcap.f$logDC   #MCAP.F OR MCAP.FF?
+# DC <- exp(logDC)
+# propD <- DC/(DC + 1)
+# propD[is.na(propD)] <- 1
+# Mcap.f$propD <- propD
 # • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
-symcols <- rev(brewer.pal(11, "RdYlBu")[c(2,1,3,9,11)])
+#symcols <- rev(brewer.pal(11, "RdYlBu")[c(2,1,3,9,11)])
 #pdf(file="Figure1.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(1.5,2,1,0), mgp=c(1.5,0.25,0), lwd=1)
 b1 <- barplot(as.matrix(compare), beside=F, ylab="Proportion", space=0.5, mgp=c(1,0.25,0), cex.lab=0.75,
-              col = c("gray20", "gray", "white"), cex.names = 0.75, cex.axis=0.6, tcl=-0.25)
+              col = c("gray20", "gray60", "gray95"), cex.names = 0.75, cex.axis=0.6, tcl=-0.25)
 text(b1, par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.75,
      labels = paste("n=", c(length(clades$present), sum(symtab2)), sep=""))
 save1.x <- grconvertX(par("usr")[2], from='user', to='ndc')
 save1.y <- grconvertY(compare[1,2], from='user', to='ndc')
 save2.y <- grconvertY(compare[1,2] + compare[2,2], from="user", to="ndc")
 legend(x=c(3.5,6), y=c(0,0.4), legend=c("D only", "C and D", "C only"), xpd=NA, cex=1,
-       fill=c("white", "gray", "gray20"), bty="n")
+       fill=c("gray95", "gray60", "gray20"), bty="n")
 par(mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
-hist(propD[which(propD > 0 & propD < 1)], breaks=c(0,0.25,0.5,0.75,1), plot=T,
-     main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray", tck=-0.05)
+hist(Mcap.f$propD[which(Mcap.f$propD > 0 & Mcap.f$propD < 1)], breaks=c(0,0.25,0.5,0.75,1), plot=T,
+     main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60", tck=-0.05)
 box()
 axis(side=1, at=seq(0,1,0.25), labels=c(">0","","0.5","","<1"), cex.axis=0.6, mgp=c(1,0,0))
 mtext(side=1, "Prop. clade D", line=1, cex=0.75)
@@ -63,17 +64,44 @@ model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")  # only vis is significant
 model <- glm(tdom ~ vis, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")
+# Look at presence of background clade D in bleached vs. non-bleached C colonies across all time points -------------
+Ccol <- Mcap.f[which(Mcap.f$tdom=="C"), ]
+Ccol[,c("sample", "reef", "date", "vis", "syms")]
+lapply(split(Ccol, f=Ccol$vis), function(x) table(x$propD!=0))  # do samples contain background D?
+modr <- glmer(propD!=0 ~ vis + (1|fdate) + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
+summary(modr)  # no difference in presence/absence of background D in bleached/unbleached C colonies over full time series
+# Look at background clade D in bleached vs. non-bleached C colonies in October
+Ccoloct <- Ccol[which(Ccol$fdate=="20141024"), ]
+modroct <- glmer(propD!=0 ~ vis + (1|sample), data=Ccoloct, family=binomial(link="logit"))
+summary(modroct)
+lapply(split(Ccoloct, f=Ccoloct$vis), function(x) table(x$propD==0))
+# In October, 6/14 (43%) of non-bleached C's had bkgd D, 
+#   while only 5/30 (17%) of bleached C's had bkgd D --- not quite significant from glmer (p=0.07)
+chi <- chisq.test(Ccoloct$vis, Ccoloct$propD!=0)  # and not quite significant from chisq test (p=0.1349)
+summary(chi)
+chi$observed
+# Look at background clade D in bleached vs. non-bleached C colonies in December
+Ccoldec <- Ccol[which(Ccol$fdate=="20141216"), ]
+modrdec <- glmer(propD!=0 ~ vis + (1|sample), data=Ccoldec, family=binomial(link="logit"))
+summary(modrdec)
+lapply(split(Ccoldec, f=Ccoldec$vis), function(x) table(x$propD==0))
+# Look at background D in colonies that were C in oct (not tdom C)
+Ccol <- Mcap.f[which(Mcap.f$fdate=="20141024" & Mcap.f$dom=="C"), ]
+chi <- chisq.test(Ccol$vis, Ccol$propD!=0)
+chi  # not quite significant
+chi$observed
 # • Figure 2: Relationship between symbiont community and bleaching -------------------------------
-#pdf("Figure2.pdf", height=4, width=4)
-par(mfrow=c(1,2), mar=c(5,3,2,1), mgp=c(1.75,0.5,0))
+#pdf("Figure2.pdf", height=3, width=3)
+par(mfrow=c(1,2), mar=c(4,3,1,1), mgp=c(1.75,0.5,0))
 plot(tdom ~ vis, data=Mcap.f.summ,  # 100% of bleached colonies were clade C; 57% of notbleached were D
-     axes=F, ylab="Proportion of colonies", xlab="", cex.axis=0.75, mgp=c(0.25,0.25,0))
+     axes=F, ylab="Proportion of colonies", xlab="", cex.axis=0.75, mgp=c(0.25,0.25,0),
+     col=c("gray20", "gray95"))
 axis(side=2, line=0.3, cex.axis=0.75, tck=-0.05, mgp=c(0.5,0.25,0))
 text(x=quantile(par("usr")[1:2], c(0.25, 0.75)), y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.75,
      labels=c("n=30", "n=30"))
 text(x=quantile(par("usr")[1:2], c(0.4,0.9)), y=par("usr")[3] - 0.05, 
      labels=c("Bleached", "Healthy"), cex.axis=1, srt=45, pos=2, xpd=T)
-legend(c(1,1.2),c(0.8,1.0), legend=c("D", "C"), fill=c("gray90", "gray30"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
+legend(c(1,1.2),c(0.8,1.0), legend=c("D", "C"), fill=c("gray95", "gray20"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
 #CONCLUSION: bleached are all clade C, not bleached may be clade C or D 50/50
 # Bleaching severity in October -- effect of symbiont clade and visual appearance
 Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
@@ -83,14 +111,14 @@ anova(model, test="F")  # tdom:vis significant, (reef is not significant if incl
 eff <- data.frame(effect("tdom:vis", model))[c(1,3,4), ]
 TukeyHSD(aov(model))
 # Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
-par(mgp=c(2,0.5,0), mar=c(5,4,2,1))
+par(mgp=c(2,0.5,0), mar=c(4,4,1,1))
 plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i", cex.axis=0.75,
      pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="", tck=-0.05, mgp=c(0.5,0.25,0))
 mtext(side=2, "ln S/H", line=2.5)
 arrows(c(1,2,3), eff$lower, c(1,2,3), eff$upper, code=3, angle=90, length=0.1, xpd=T)
-points(c(1,2,3), eff$fit, pch=21, bg=c("gray20", "gray20", "gray80"), cex=2, xpd=T)
+points(c(1,2,3), eff$fit, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, xpd=T)
 axis(side=1, at=c(1,2,3), labels=NA, tck=-0.05)
-text(c(1.5,2.5,3.5), par("usr")[3] - 0.3, xpd=T, srt=45, pos=2, cex.axis=1,
+text(c(1.5,2.5,3.5), par("usr")[3] - 0.3, xpd=T, srt=45, pos=2, cex=0.9,
      labels=c("Bleached (C)", "Healthy (C)", "Healthy (D)"))
 #dev.off()
 # • Analysis: Symbiont community structure in each colony over time ------------------------------------------------------
