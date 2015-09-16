@@ -90,6 +90,21 @@ Ccol <- Mcap.f[which(Mcap.f$fdate=="20141024" & Mcap.f$dom=="C"), ]
 chi <- chisq.test(Ccol$vis, Ccol$propD!=0)
 chi  # not quite significant
 chi$observed
+# Look at mixed vs. non-mixed frequency on diff dates
+Mcap.f$syms
+Mcap.f$mixed <- nchar(as.character(Mcap.f$syms)) - 1  # 1= mixed, 0=single clade
+mod <- glmer(mixed ~ fdate * vis * reef + (1|sample), family="binomial", Mcap.f)
+summary(mod)
+Mcap.f.b <- Mcap.f[which(Mcap.f$vis=="bleached"), ]
+mod <- glmer(mixed ~ fdate + (1|sample), family="binomial", Mcap.f.b)
+summary(mod)
+dropterm(mod, test="Chisq")
+# Look at presence of D by date
+mod <- glmer(is.na(D.SH) ~ fdate * vis + (1|sample), family="binomial", Mcap.f)
+table(is.na(Mcap.f$D.SH) ~ Mcap.f$fdate)
+lapply(split(Mcap.f, f=Mcap.f$fdate), function(x) table(is.na(x$D.SH)))
+summary(mod)
+
 # • Figure 2: Relationship between symbiont community and bleaching -------------------------------
 #pdf("Figure2.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(4,3,1,1), mgp=c(1.75,0.5,0))
