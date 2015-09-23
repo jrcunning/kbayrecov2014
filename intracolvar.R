@@ -16,12 +16,6 @@ icv$result$colony <- cut(as.numeric(icv$result$Sample.Name), include.lowest=TRUE
                   labels=c("31", "32", "25", "44", "20", "3"))
 
 boxplot(tot.SH ~ colony, data=icv$result)
-boxplot(log(tot.SH) ~ colony, data=icv$result)
+boxplot(log(tot.SH) ~ colony, data=icv$result, xlab="Colony", ylab="ln S/H")
 mod <- aov(log(tot.SH) ~ colony, data=icv$result)
 summary(mod)
-library(effects)
-plot(effect("colony", mod))
-library(lsmeans)
-lsms <- lsmeans(mod, specs = "colony", contr="cld")
-lsms
-
