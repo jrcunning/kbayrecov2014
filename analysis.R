@@ -29,14 +29,16 @@ range(propD)
 # Percent of samples with >10% non-dominant symbiont (between 10% and 90% clade D)
 sum(prop.table(hist(propD, plot=F)$counts)[2:9])
 
-# Analyze patterns in clade composition across reefs
-cladecomp <- merge(unique(Mcap.f[, c("colony", "reef", "tdom")]), colonies)
-# Analyze proportions of mixed colonies across reefs
-chisq1 <- chisq.test(cladecomp$reef, cladecomp$present)  # no differences
-chisq1$observed; chisq1$p.value  # No differences
-# Analyze proportions of dominant symbionts across reefs
-chisq2 <- chisq.test(cladecomp$reef, cladecomp$tdom)
-chisq2$observed; chisq2$p.value  # No differences
+# These tests are not relevant because population was not randomly sampled (targeted bleached and healthy pairs)
+# # Analyze patterns in clade composition across reefs
+# cladecomp <- merge(unique(Mcap.f[, c("colony", "reef", "tdom")]), colonies)
+# # Analyze proportions of mixed colonies across reefs
+# chisq1 <- chisq.test(cladecomp$reef, cladecomp$present)  # no differences
+# chisq1$observed; chisq1$p.value  # No differences
+# # Analyze proportions of dominant symbionts across reefs
+# chisq2 <- chisq.test(cladecomp$reef, cladecomp$tdom)
+# chisq2$observed; chisq2$p.value  # No differences
+
 # • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
 #pdf(file="Figure1.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
@@ -79,43 +81,56 @@ brackets(x1=par("usr")[2], y1=par("usr")[4], x2=par("usr")[2], y2=propdom["C"],
 text(x=rep(par("usr")[2] + 0.5, 2), y=c(0.4, 0.9), labels = c("C dominant", "D dominant"), 
      xpd=T, pos=1, srt=90, cex=0.75)
 #dev.off()
+
 # • Analysis: Relationship between dominant symbiont clade and bleaching -------------------------------
 # Summarize data - reef, visual status, and dominant symbiont for each colony
 Mcap.f.summ <- unique(Mcap.f[, c("colony", "vis", "reef", "tdom")])
-# Logistic regression testing effect of visual appearance and reef on dominant clade
-model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
-anova(model, test="Chisq")  # only vis is significant
-# • Figure 2: Relationship between symbiont community and bleaching -------------------------------
-#pdf("Figure2.pdf", height=3, width=3)
-par(mfrow=c(1,2), mar=c(4,3,1,1), mgp=c(1.75,0.5,0))
-plot(tdom ~ vis, data=Mcap.f.summ,  # 100% of bleached colonies were clade C; 57% of notbleached were D
-     axes=F, ylab="Proportion of colonies", xlab="", cex.axis=0.75, mgp=c(0.25,0.25,0),
-     col=c("gray20", "gray95"))
-axis(side=2, line=0.3, cex.axis=0.75, tck=-0.05, mgp=c(0.5,0.25,0))
-text(x=quantile(par("usr")[1:2], c(0.25, 0.75)), y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.75,
-     labels=c("n=30", "n=30"))
-text(x=quantile(par("usr")[1:2], c(0.4,0.9)), y=par("usr")[3] - 0.05, 
-     labels=c("Bleached", "Healthy"), cex.axis=1, srt=45, pos=2, xpd=T)
-legend(c(1,1.2),c(0.8,1.0), legend=c("D", "C"), fill=c("gray95", "gray20"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
-#CONCLUSION: bleached are all clade C, not bleached may be clade C or D 50/50
-# Bleaching severity in October -- effect of symbiont clade and visual appearance
+# Test for differences in dominant clade between bleached and unbleached colonies
+vis.chi <- chisq.test(Mcap.f.summ$vis, Mcap.f.summ$tdom)
+vis.chi[c("observed", "p.value")]
+
+# Test for differences in dominant clade of unbleached colonies across reefs
+with(Mcap.f.summ[which(Mcap.f.summ$vis=="not bleached"), ], {
+  chisq.test(reef, tdom)[c("observed", "p.value")]
+})  # No difference
+
+# Analyze bleaching severity (S/H cell ratio) in October (peak of bleaching)
 Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
-model <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
-anova(model, test="F")  # tdom:vis significant, (reef is not significant if included)
-#plot(effect("tdom:vis", model))
-eff <- data.frame(effect("tdom:vis", model))[c(1,3,4), ]
-TukeyHSD(aov(model))
-# Conclusion: Bleached C colonies had lowest S/H, Unbleached C and D colonies had same S/H
-par(mgp=c(2,0.5,0), mar=c(4,4,1,1))
-plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i", cex.axis=0.75,
-     pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="", tck=-0.05, mgp=c(0.5,0.25,0))
-mtext(side=2, "ln S/H", line=2.5)
-arrows(c(1,2,3), eff$lower, c(1,2,3), eff$upper, code=3, angle=90, length=0.1, xpd=T)
+bleach <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
+anova(bleach, test="F")  # tdom:vis significant, (reef is not significant if included)
+eff <- data.frame(effect("tdom:vis", bleach))[c(1,3,4), ]
+TukeyHSD(aov(bleach))  # Pairwise tests between groups
+# Differences between bleached and unbleached colonies only
+bleach2 <- lm(log(tot.SH) ~ vis, data=Mcap.ff.oct)
+summary(bleach2)
+eff2 <- data.frame(effect("vis", bleach2))
+exp(eff2$fit)  # S/H ratios in bleached vs. unbleached colonies
+
+
+# • Figure 2: Relationship between symbiont community and bleaching -------------------------------
+pdf("Figure2.pdf", height=3, width=3)
+par(mfrow=c(1,2), mar=c(4,2,1,1), mgp=c(1.75,0.5,0))
+# Plot barplot of C and D dominance in bleached and healthy corals
+bars <- barplot(t(as.matrix(vis.chi$observed / rowSums(vis.chi$observed))), beside=F, xaxt="n", yaxt="n",
+                ylab="", xlab="", cex.axis=0.75, cex.names=0.75, mgp=c(1, 0.25, 0), tck=-0.05)
+axis(side=2, cex.axis=0.5, tck=-0.05, mgp=c(0.25,0.25,0))
+mtext(side=2, text = "Proportion of colonies", line=1.1, cex=0.75)
+text(x=bars, y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.5,
+     labels=c("n=30", "n=30"))
+text(x=bars + 0.4, y=par("usr")[3] - 0.05, labels=c("Bleached", "Healthy"), cex=0.9, srt=45, pos=2, xpd=T)
+legend(par("usr")[2] * c(0.95,1.15), c(0.8, 1.0), 
+       legend=c("D", "C"), fill=c("gray95", "gray20"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
+# Plot bleaching severity in October by tdom:vis
+par(mgp=c(2,0.5,0), mar=c(4,3.75,1,1))
+plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i", cex.axis=0.5,
+     pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="", tck=-0.05, mgp=c(0.25,0.25,0))
+mtext(side=2, "ln S/H", line=2, cex=0.75)
+arrows(c(1,2,3), eff$lower, c(1,2,3), eff$upper, code=3, angle=90, length=0.075, xpd=T)
 points(c(1,2,3), eff$fit, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, xpd=T)
 axis(side=1, at=c(1,2,3), labels=NA, tck=-0.05)
 text(c(1.5,2.5,3.5), par("usr")[3] - 0.3, xpd=T, srt=45, pos=2, cex=0.9,
      labels=c("Bleached (C)", "Healthy (C)", "Healthy (D)"))
-#dev.off()
+dev.off()
 # • Analysis: Symbiont community structure in each colony over time ------------------------------------------------------
 clades <- melt(Mcap.f, id.vars=c("sample", "date", "vis", "reef", "tdom"), measure.vars="syms",
                factorsAsStrings=FALSE)
