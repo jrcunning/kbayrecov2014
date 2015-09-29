@@ -23,16 +23,21 @@ colonies$present <- ifelse(is.na(colonies$C), ifelse(is.na(colonies$D), "none", 
 clades <- data.frame(Colonies=matrix(prop.table(table(colonies$present))), Samples=prop.table(samples))
 # Proportion of colonies with C or D dominant over time
 propdom <- prop.table(table(Mcap.f[which(Mcap.f$fdate=="20141024"), "tdom"]))
+# Proportion D in mixed samples
+propD <- Mcap.f$propD[which(Mcap.f$propD > 0 & Mcap.f$propD < 1)]
+range(propD)
+# Percent of samples with >10% non-dominant symbiont (between 10% and 90% clade D)
+sum(prop.table(hist(propD, plot=F)$counts)[2:9])
 # • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
 pdf(file="Figure1.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
-hist(Mcap.f$propD[which(Mcap.f$propD > 0 & Mcap.f$propD < 1)], breaks=c(0,0.25,0.5,0.75,1), plot=T,
-     main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60", tck=-0.05)
+hist(propD, plot=T, main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60")
 box()
-axis(side=1, at=seq(0,1,0.25), labels=c(">0","","0.5","","<1"), cex.axis=0.6, mgp=c(1,0,0))
+axis(side=1, at=seq(0,1,0.1), labels=NA, tck=-0.05)
+axis(side=1, at=c(0,0.5,1), labels=c(">0","0.5","<1"), cex.axis=0.6, mgp=c(1,0,0), tck=0)
 mtext(side=1, "Prop. clade D", line=1, cex=0.75)
-axis(side=2, cex.axis=0.6, mgp=c(1,0.15,0))
+axis(side=2, tck=-0.05, cex.axis=0.6, mgp=c(1,0.15,0))
 mtext(side=2, "# samples", line=0.8, cex=0.75)
 # Save coordinates from histogram plot for drawing lines
 save1.x <- grconvertX(par("usr")[2], from='user', to='ndc')
@@ -69,9 +74,9 @@ dev.off()
 
 # • Analysis: Relationship between symbiont community and bleaching -------------------------------
 # Summarize data - reef, visual status, and dominant symbiont for each colony
-Mcap.f.summ <- unique(Mcap.f[, c("sample", "vis", "reef", "tdom")])
-Mcap.f.oct <- Mcap.f[which(Mcap.f$fdate=="20141024"), c("sample", "vis", "reef", "dom")]
-Mcap.f.oct
+Mcap.f.summ <- unique(Mcap.f[, c("colony", "vis", "reef", "tdom")])
+# Mcap.f.oct <- Mcap.f[which(Mcap.f$fdate=="20141024"), c("colony", "vis", "reef", "dom")]
+# Mcap.f.oct
 # Logistic regression testing effect of visual appearance and reef on dominant clade
 model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")  # only vis is significant
