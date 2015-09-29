@@ -130,19 +130,11 @@ Mcap.f <- filter.dups(Mcap)
 # boxplot(Mcap.f[, c("Mcap.Ct.sd", "C.Ct.sd", "D.Ct.sd")], horizontal=T, las=2, ylim=c(0,5),
 #         main="Filtered runs")
 
-# Identify overall dominant symbiont clade across time points based on frequency of dominance
-syms <- ldply(split(Mcap.f[, "dom"], f = Mcap.f$colony), table)
-dom <- apply(syms, 1, FUN=function(x) ifelse(x[2] > x[3], "C", ifelse(x[3] > x[2], "D", "CD")))
-dom <- cbind(syms, dom)
-rownames(dom) <- dom$".id"
-Mcap.f$tdom <- dom[as.character(Mcap.f$colony), "dom"]
-# two colonies dominated equal number of times by C or D -- for these, take mean logDC to define tdom
-with(Mcap.f[which(Mcap.f$tdom=="CD"), ], {
-  aggregate(logDC, by=list(colony), FUN=mean)  
-})  # both are negative, showing C more dominant on average
-Mcap.f[which(Mcap.f$colony %in% c(40, 92)), "tdom"] <- "C"
-Mcap.f <- droplevels(Mcap.f)
-
+# # Identify overall dominant symbiont clade across time points based on mean proportion clade D
+meanpropD <- aggregate(Mcap.f$propD, by=list(colony=Mcap.f$colony), FUN=mean, na.rm=T)
+meanpropD$tdom <- ifelse(meanpropD$x > 0.5, "D", "C")
+rownames(meanpropD) <- meanpropD$colony
+Mcap.f$tdom <- meanpropD[as.character(Mcap.f$colony), "tdom"]
 
 
 # -------------------------------------------------------------------------------------------------
