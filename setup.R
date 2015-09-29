@@ -20,6 +20,7 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   x <- x[ii]
   polygon(c(x, rev(x)), c(y1, rev(y2)), col=col, border=NA, ...)
 }
+
 # -------------------------------------------------------------------------------------------------
 # • Load data -------------------------------------------------------------------------------------
 # Use steponeR to import data and calculate S/H ratios
@@ -83,10 +84,10 @@ colnames(Mcap)[which(colnames(Mcap)=="sample")] <- "colony"
 filter.dups <- function(data) {
   keep <- data.frame()  # Create empty data frame to receive runs to keep
   # Identify duplicated samples (i.e., samples run multiple times)
-  dups <- unique(rbind(data[duplicated(interaction(data$sample, data$date)), ], 
-                       data[rev(duplicated(rev(interaction(data$sample, data$date)))), ]))
+  dups <- unique(rbind(data[duplicated(interaction(data$colony, data$date)), ], 
+                       data[rev(duplicated(rev(interaction(data$colony, data$date)))), ]))
   # Create list of data frames for each duplicated sample
-  dups.list <- split(dups, f=interaction(dups$sample, dups$date))
+  dups.list <- split(dups, f=interaction(dups$colony, dups$date))
   # Loop through each duplicated sample and select which run to keep
   for (sample in dups.list) {
     # If any of the runs are a re-extraction, keep the extraction that gave lowest Mcap Ct value
@@ -130,16 +131,16 @@ Mcap.f <- filter.dups(Mcap)
 #         main="Filtered runs")
 
 # Identify overall dominant symbiont clade across time points based on frequency of dominance
-syms <- ldply(split(Mcap.f[, "dom"], f = Mcap.f$sample), table)
+syms <- ldply(split(Mcap.f[, "dom"], f = Mcap.f$colony), table)
 dom <- apply(syms, 1, FUN=function(x) ifelse(x[2] > x[3], "C", ifelse(x[3] > x[2], "D", "CD")))
 dom <- cbind(syms, dom)
 rownames(dom) <- dom$".id"
-Mcap.f$tdom <- dom[as.character(Mcap.f$sample), "dom"]
+Mcap.f$tdom <- dom[as.character(Mcap.f$colony), "dom"]
 # two colonies dominated equal number of times by C or D -- for these, take mean logDC to define tdom
 with(Mcap.f[which(Mcap.f$tdom=="CD"), ], {
-  aggregate(logDC, by=list(sample), FUN=mean)  
+  aggregate(logDC, by=list(colony), FUN=mean)  
 })  # both are negative, showing C more dominant on average
-Mcap.f[which(Mcap.f$sample %in% c(40, 92)), "tdom"] <- "C"
+Mcap.f[which(Mcap.f$colony %in% c(40, 92)), "tdom"] <- "C"
 Mcap.f <- droplevels(Mcap.f)
 
 
