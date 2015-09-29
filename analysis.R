@@ -15,7 +15,7 @@ set.seed(39059978)
 symtab <- table(Mcap.f$syms)
 samples <- c(symtab[1], symtab[2] + symtab[3], symtab[4])
 # Presence of clade C and D in colonies (detected at least once)
-colonies <- aggregate(Mcap.f$syms, by=list(sample=Mcap.f$colony), FUN=paste, collapse="")
+colonies <- aggregate(Mcap.f$syms, by=list(colony=Mcap.f$colony), FUN=paste, collapse="")
 colonies$C[grep("C", colonies$x)] <- "C"
 colonies$D[grep("D", colonies$x)] <- "D"
 colonies$present <- ifelse(is.na(colonies$C), ifelse(is.na(colonies$D), "none", "D only"), ifelse(is.na(colonies$D), "C only", "C+D"))
@@ -28,8 +28,17 @@ propD <- Mcap.f$propD[which(Mcap.f$propD > 0 & Mcap.f$propD < 1)]
 range(propD)
 # Percent of samples with >10% non-dominant symbiont (between 10% and 90% clade D)
 sum(prop.table(hist(propD, plot=F)$counts)[2:9])
+
+# Analyze patterns in clade composition across reefs
+cladecomp <- merge(unique(Mcap.f[, c("colony", "reef", "tdom")]), colonies)
+# Analyze proportions of mixed colonies across reefs
+chisq1 <- chisq.test(cladecomp$reef, cladecomp$present)  # no differences
+chisq1$observed; chisq1$p.value  # No differences
+# Analyze proportions of dominant symbionts across reefs
+chisq2 <- chisq.test(cladecomp$reef, cladecomp$tdom)
+chisq2$observed; chisq2$p.value  # No differences
 # • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
-pdf(file="Figure1.pdf", height=3, width=3)
+#pdf(file="Figure1.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
 hist(propD, plot=T, main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60")
@@ -69,19 +78,13 @@ brackets(x1=par("usr")[2], y1=par("usr")[4], x2=par("usr")[2], y2=propdom["C"],
          h=0.3, xpd=NA, type=1)
 text(x=rep(par("usr")[2] + 0.5, 2), y=c(0.4, 0.9), labels = c("C dominant", "D dominant"), 
      xpd=T, pos=1, srt=90, cex=0.75)
-dev.off()
-
-
-# • Analysis: Relationship between symbiont community and bleaching -------------------------------
+#dev.off()
+# • Analysis: Relationship between dominant symbiont clade and bleaching -------------------------------
 # Summarize data - reef, visual status, and dominant symbiont for each colony
 Mcap.f.summ <- unique(Mcap.f[, c("colony", "vis", "reef", "tdom")])
-# Mcap.f.oct <- Mcap.f[which(Mcap.f$fdate=="20141024"), c("colony", "vis", "reef", "dom")]
-# Mcap.f.oct
 # Logistic regression testing effect of visual appearance and reef on dominant clade
 model <- glm(tdom ~ vis * reef, data=Mcap.f.summ, family=binomial(link="logit"))
 anova(model, test="Chisq")  # only vis is significant
-model <- glm(tdom ~ vis, data=Mcap.f.summ, family=binomial(link="logit"))
-anova(model, test="Chisq")
 # • Figure 2: Relationship between symbiont community and bleaching -------------------------------
 #pdf("Figure2.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(4,3,1,1), mgp=c(1.75,0.5,0))
