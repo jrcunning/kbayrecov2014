@@ -75,6 +75,9 @@ Mcap$fdate <- revalue(Mcap$date, c("10.24"="20141024", "11.04"="20141104", "11.2
 Mcap$date <- as.Date(Mcap$fdate, format="%Y%m%d")
 Mcap$time <- as.POSIXct(Mcap$date)
 Mcap$days <- as.numeric(Mcap$date) - min(as.numeric(Mcap$date))
+
+# Replace "sample" column name with "colony"
+colnames(Mcap)[which(colnames(Mcap)=="sample")] <- "colony"
 # -------------------------------------------------------------------------------------------------
 # • Filter duplicates (samples run multiple times) --------------------------------------------------
 filter.dups <- function(data) {
