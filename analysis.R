@@ -22,11 +22,10 @@ colonies$present <- ifelse(is.na(colonies$C), ifelse(is.na(colonies$D), "none", 
 # Summary of clade composition of samples and colonies
 clades <- data.frame(Colonies=matrix(prop.table(table(colonies$present))), Samples=prop.table(samples))
 # Proportion of colonies with C or D dominant over time
-propdom <- table(Mcap.f[which(Mcap.f$fdate=="20141024"), "tdom"])
-
-
+propdom <- prop.table(table(Mcap.f[which(Mcap.f$fdate=="20141024"), "tdom"]))
 # • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
-#pdf(file="newFigure1.pdf", height=3, width=3)
+pdf(file="Figure1.pdf", height=3, width=3)
+# Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
 hist(Mcap.f$propD[which(Mcap.f$propD > 0 & Mcap.f$propD < 1)], breaks=c(0,0.25,0.5,0.75,1), plot=T,
      main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60", tck=-0.05)
@@ -35,44 +34,37 @@ axis(side=1, at=seq(0,1,0.25), labels=c(">0","","0.5","","<1"), cex.axis=0.6, mg
 mtext(side=1, "Prop. clade D", line=1, cex=0.75)
 axis(side=2, cex.axis=0.6, mgp=c(1,0.15,0))
 mtext(side=2, "# samples", line=0.8, cex=0.75)
-
+# Save coordinates from histogram plot for drawing lines
 save1.x <- grconvertX(par("usr")[2], from='user', to='ndc')
 save1.y <- grconvertY(par("usr")[3], from='user', to='ndc')
 save2.y <- grconvertY(par("usr")[4], from='user', to='ndc')
-
-#legend(x=par("usr")[1:2], y=c(-60,-70), legend=c("D only", "C and D", "C only"), xpd=NA, cex=1,
-#       fill=c("gray95", "gray60", "gray20"), bty="n")
-
+# Add legend for barplot
 legend("bottom", inset=c(0,-2), legend=c("D only", "C and D", "C only"), xpd=NA, cex=1,
        fill=c("gray95", "gray60", "gray20"), bty="n")
-
+# Plot barplot of clade composition of samples and colonies
 par(mar=c(2,0,1,2), mgp=c(1.5,0.25,0), lwd=1)
-b1 <- barplot(as.matrix(compare)[,c(2,1)], beside=F, space=0.75, mgp=c(1,0.25,0),
+b1 <- barplot(as.matrix(clades)[,c(2,1)], beside=F, space=0.75, mgp=c(1,0.25,0),
               col = c("gray20", "gray60", "gray95"), axes=F, cex.names=0.75, line=-0.3, names.arg=c("",""))
 axis(side=1, at=b1, labels=c("Samples", "Colonies"), lty=0, cex.axis=0.75, padj=1, line=-0.6)
 text(b1, par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.75,
-     labels = paste("n=", c(sum(symtab2), length(clades$present)), sep=""))
+     labels = paste("n=", c(sum(samples), dim(colonies)[1]), sep=""))
 text(b1[2], par("usr")[3] - 0.11, labels = "(sampled 3-6x)", cex=0.5, xpd=T)
 axis(side=2, pos=quantile(par("usr")[1:2], 0.54), las=1, mgp=c(0,-0.4,0), lty=0, cex.axis=0.6,
      at=c(0,0.2,0.4,0.6,0.8,1),
      labels = c("-0.0-", "-0.2-", "-0.4-", "-0.6-", "-0.8-", "-1.0-"))
-
-
-segments(x0 = par("usr")[1], y0 = compare[1,2], 
+segments(x0 = par("usr")[1], y0 = clades[1,2], 
          x1 = grconvertX(save1.x, from='ndc'), 
          y1 = grconvertY(save1.y, from='ndc'), lty=1, xpd=NA)
-segments(x0 = par("usr")[1], y0 = 1 - compare[3,2], 
+segments(x0 = par("usr")[1], y0 = 1 - clades[3,2], 
          x1 = grconvertX(save1.x, from='ndc'), 
          y1 = grconvertY(save2.y, from='ndc'), lty=1, xpd=NA)
-
-
 brackets(x1=par("usr")[2], y1=propdom["C"], x2=par("usr")[2], y2=par("usr")[3],
          h=0.3, xpd=NA, type=1)
 brackets(x1=par("usr")[2], y1=par("usr")[4], x2=par("usr")[2], y2=propdom["C"],
          h=0.3, xpd=NA, type=1)
 text(x=rep(par("usr")[2] + 0.5, 2), y=c(0.4, 0.9), labels = c("C dominant", "D dominant"), 
      xpd=T, pos=1, srt=90, cex=0.75)
-#dev.off()
+dev.off()
 
 
 # • Analysis: Relationship between symbiont community and bleaching -------------------------------
