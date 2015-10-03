@@ -104,7 +104,7 @@ summary(bleach2)
 eff2 <- data.frame(effect("vis", bleach2))
 exp(eff2$fit)  # S/H ratios in bleached vs. unbleached colonies
 # • Figure 2: Relationship between symbiont community and bleaching -------------------------------
-pdf("Figure2.pdf", height=3, width=3)
+#pdf("Figure2.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(4,2,1,1), mgp=c(1.75,0.5,0))
 # Plot barplot of C and D dominance in bleached and healthy corals
 bars <- barplot(t(as.matrix(vis.chi$observed / rowSums(vis.chi$observed))), beside=F, xaxt="n", yaxt="n",
@@ -126,7 +126,7 @@ points(c(1,2,3), eff$fit, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, xpd
 axis(side=1, at=c(1,2,3), labels=NA, tck=-0.05)
 text(c(1.5,2.5,3.5), par("usr")[3] - 0.3, xpd=T, srt=45, pos=2, cex=0.9,
      labels=c("Bleached (C)", "Healthy (C)", "Healthy (D)"))
-dev.off()
+#dev.off()
 # • Analysis: Symbiont community structure in each colony over time -------------------------------
 clades <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef", "tdom"), measure.vars="syms",
                factorsAsStrings=FALSE)
@@ -134,9 +134,9 @@ clades <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef", "tdom"), measu
 clades$value <- as.numeric(factor(clades$value))
 clades <- dcast(clades, vis + colony + reef + tdom ~ date, drop=T)
 clades[is.na(clades)] <- -1  # Recode missing values as -1
-clades.m <- clades[with(clades, order(rev(vis), tdom, clades[, 5], clades[, 6], clades[, 7], 
+clades.m0 <- clades[with(clades, order(rev(vis), tdom, clades[, 5], clades[, 6], clades[, 7], 
                                     clades[, 8], clades[, 9], clades[, 10])), ]
-clades.m <- as.matrix(clades.m[,5:10], row.names=as.character(clades.m$colony))
+clades.m <- as.matrix(clades.m0[,5:10], row.names=as.character(clades.m0$colony))
 rownames(clades.m) <- as.character(clades$colony)
 # How many colonies showed variable dominant symbionts over time
 doms <- aggregate(Mcap.f$dom, by=list(colony=Mcap.f$colony), FUN=paste)
@@ -152,7 +152,6 @@ df <- merge(domswitch, Mcap.f.summ)
 model <- glm(domswitch ~ vis + reef + tdom, data=df, family=binomial)
 dropterm(model, test="Chisq")
 chisq.test(df$tdom, df$domswitch)$observed
-
 # • Figure 3: Symbiont community structure in each colony over time ----------------------------------------
 pdf("Figure3.pdf", width=3.5, height=6)
 par(mfrow=c(1,1), mar=c(3,5,2,2), bg="white")
@@ -179,9 +178,8 @@ for (i in 1:nrow(clades)) {
 rect(par("usr")[1] - 1.25, par("usr")[3], par("usr")[1] - 0.25, par("usr")[4], xpd=T)
 lines(x=c(par("usr")[1] - 2.25, par("usr")[1] - 0.25), y=rep(quantile(par("usr")[3:4], 0.5), 2), xpd=T)
 # Plot tdom side boxes
-clades$tdom
-breaks <- c(0, which(diff(as.numeric(clades$tdom))!=0), length(clades$tdom))
-doms <- clades$tdom[breaks]
+breaks <- c(0, which(diff(as.numeric(clades.m0$tdom))!=0), length(clades.m0$tdom))
+doms <- clades.m0$tdom[breaks]
 for (i in 2:length(breaks)) {
   rect(par("usr")[2] + 0.25, par("usr")[3] + breaks[i-1], par("usr")[2] + 0.75, par("usr")[3] + breaks[i], xpd=T)
 }
@@ -189,10 +187,6 @@ for (i in 1:(length(breaks)-1)) {
   text(par("usr")[2] + 0.5, (breaks[i] + breaks[i+1]) / 2, paste(doms[i], "dominant"), xpd=T, srt=90,
        cex=0.75)
 }
-
-
-
-
 # Plot Row Side Color Key
 for (i in 1:3) {
   rect(par("usr")[1] - 1.25, quantile(par("usr")[3:4], 0) * -1.05 - ((i - 1) * 1),
@@ -226,17 +220,17 @@ mod
 summary(mod)
 # Look at presence of background clade D in bleached vs. non-bleached C colonies across all time points
 Ccol <- Mcap.f[which(Mcap.f$tdom=="C"), ]
-modr <- glmer(propD!=0 ~ vis * fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr2 <- glmer(propD!=0 ~ vis + fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr3 <- glmer(propD!=0 ~ fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr4 <- glmer(propD!=0 ~ (1|reef/sample), data=Ccol, family=binomial(link="logit"))
+modr <- glmer(propD!=0 ~ vis * fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr2 <- glmer(propD!=0 ~ vis + fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr3 <- glmer(propD!=0 ~ fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr4 <- glmer(propD!=0 ~ (1|reef/colony), data=Ccol, family=binomial(link="logit"))
 anova(modr, modr2, modr3, modr4)  # No significant effects of vis or date on presence of background clade D
 # Look at frequency of CD mixtures vs. non-mixed frequency on diff dates
 Mcap.f$mixed <- nchar(as.character(Mcap.f$syms)) - 1  # 1=mixed, 0=single clade
-modr <- glmer(mixed ~ vis * fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr2 <- glmer(mixed ~ vis + fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr3 <- glmer(mixed ~ fdate + (1|reef/sample), data=Ccol, family=binomial(link="logit"))
-modr4 <- glmer(mixed ~ (1|reef/sample), data=Ccol, family=binomial(link="logit"))
+modr <- glmer(mixed ~ vis * fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr2 <- glmer(mixed ~ vis + fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr3 <- glmer(mixed ~ fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
+modr4 <- glmer(mixed ~ (1|reef/colony), data=Ccol, family=binomial(link="logit"))
 anova(modr, modr2, modr3, modr4)  # No significant effects of vis or date on presence of C/D mixtures
 # =================================================================================================
 # RECOVERY
@@ -247,73 +241,45 @@ anova(modr, modr2, modr3, modr4)  # No significant effects of vis or date on pre
 #   From January to May, fit a linear model (2nd element of degree=1)
 #   Function is continuous at time=82 days (smooth=0)
 sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
-# Build models with random intercept and slope, and random intercept only
-mod.all <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * Mcap.ff$vis * Mcap.ff$reef + (1 | Mcap.ff$colony), data=Mcap.ff)
-mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * Mcap.ff$vis * Mcap.ff$tdom * Mcap.ff$reef + (1 | Mcap.ff$colony), data=Mcap.ff)
-mod.all.final <- step(mod.all.full)$model
-anova(mod.all, mod.all.final)  # Model with random intercept only is best
-# Test significance of factors in model
-dropterm(mod.all, test="Chisq")
+# Build and select by backwards selection
+mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * Mcap.ff$vis * Mcap.ff$tdom * Mcap.ff$reef + (1 | Mcap.ff$colony))
+# mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * Mcap.ff$reef * (Mcap.ff$vis:Mcap.ff$tdom) + (1 | Mcap.ff$colony))
+# mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) + Mcap.ff$reef + Mcap.ff$vis + Mcap.ff$tdom + (1 | Mcap.ff$colony) +
+#                                  sp(Mcap.ff$days):Mcap.ff$reef + sp(Mcap.ff$days):Mcap.ff$vis + sp(Mcap.ff$days):Mcap.ff$tdom +
+#                                  Mcap.ff$reef:Mcap.ff$vis + Mcap.ff$reef:Mcap.ff$tdom + Mcap.ff$vis:Mcap.ff$tdom + 
+#                                  sp(Mcap.ff$days):Mcap.ff$reef:Mcap.ff$vis + sp(Mcap.ff$days):Mcap.ff$reef:Mcap.ff$tdom +
+#                                  sp(Mcap.ff$days):Mcap.ff$vis:Mcap.ff$tdom + Mcap.ff$reef:Mcap.ff$vis:Mcap.ff$tdom +
+#                                  sp(Mcap.ff$days):Mcap.ff$reef:Mcap.ff$vis:Mcap.ff$tdom)
+# mod.all.full <- mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * (Mcap.ff$vis:Mcap.ff$tdom) * Mcap.ff$reef + (1 | Mcap.ff$colony))
+anova(mod.all.full)
+summary(mod.all.full)
+dropterm(mod.all.full, test="Chisq")
+modselect <- step(mod.all.full, lsmeans.calc=F, difflsmeans.calc=F)
+result <- modselect$anova.table
+rownames(result) <- gsub("sp(Mcap.ff$days)", "time", fixed=T, rownames(result))
+rownames(result) <- gsub("Mcap.ff$tdom", "clade", fixed=T, rownames(result))
+rownames(result) <- gsub("Mcap.ff$reef", "reef", fixed=T, rownames(result))
+rownames(result) <- gsub("Mcap.ff$vis", "bleach", fixed=T, rownames(result))
+result
+
+#write(print(xtable(modselect$anova.table), type="html"), file="test.html")
+mod.all <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=Mcap.ff)
+anova(mod.all)
+summary(mod.all)
+
 # Remove outliers with residuals > 2.5 s.d.'s from 0
-rm.outliers <- romr.fnc(mod.all, Mcap.ff, trim=2.5)
-rm.outliers$data0[which(abs(rm.outliers$data0$rstand) > 2.5), ]  # which data points are removed
-mod.all <- update(mod.all, data = rm.outliers$data)
+out <- abs(residuals(mod.all)) > sd(residuals(mod.all)) * 2.5
+Mcap.ff[out, ]  # outlying data points
+mod.all <- update(mod.all, data=Mcap.ff[!out, ])
+
 # Generate predictions and confidence intervals using bootMer
 pred.all <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")),
                          vis=factor(c("bleached", "not bleached")))
 bootfit <- bootMer(mod.all, FUN=function(x) predict(x, pred.all, re.form=NA), nsim=999)
-# Extract 90% confidence interval on predicted values
+# Extract 95% confidence interval on predicted values
 pred.all$fit <- predict(mod.all, pred.all, re.form=NA)
-pred.all$lci <- apply(bootfit$t, 2, quantile, 0.05)
-pred.all$uci <- apply(bootfit$t, 2, quantile, 0.95)
-#newdat.all <- split(newdat.all, f=interaction(newdat.all$reef, newdat.all$vis))
-# Summarize raw data for plotting
-mdf <- model.frame(mod.all)
-model.data.summ <- data.frame(expand.grid(reef=levels(mdf$reef), vis=levels(mdf$vis),
-                                          days=as.numeric(as.character(levels(factor(mdf$`sp(days)`[,1]))))),
-                              mean=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$vis, mdf$`sp(days)`[,1])), FUN=mean)$x,
-                              sd=aggregate(mdf$`log(tot.SH)`, by=list(interaction(mdf$reef, mdf$vis, mdf$`sp(days)`[,1])), FUN=sd)$x)
-model.data.summ <- split(model.data.summ, f=interaction(model.data.summ$reef, model.data.summ$vis))
-
-# NB corals only -----------------
-
-# Subset data
-Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
-xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ colony, data=Mcap.ff.nb[order(Mcap.ff.nb$days), ],
-       type = "o", layout=c(3, 2), main="not bleached colonies")
-# - Analysis: symbiont abundance over full time series (October to May)
-# Build model
-spq <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
-mod.nb <- lmerTest::lmer(log(tot.SH) ~ reef + (1|colony), data=Mcap.ff.nb)
-summary(mod.nb)
-dropterm(mod.nb, test="Chisq")
-anova(mod.nb, test="Chisq")
-mod.nb <- lmerTest::lmer(log(tot.SH) ~ spq(Mcap.ff.nb$days) * reef + (1|colony), data=Mcap.ff.nb)
-mod.nb1 <- lmerTest::lmer(log(tot.SH) ~ spq(Mcap.ff.nb$days) * (reef + tdom) + (1 | colony), data=Mcap.ff.nb)
-mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ spq(Mcap.ff.nb$days) + reef + tdom + 
-                            spq(Mcap.ff.nb$days):reef + spq(Mcap.ff.nb$days):tdom +
-                            reef:tdom + (1 | colony), data=Mcap.ff.nb)
-mod.nb3 <- lmerTest::lmer(log(Mcap.ff.nb$tot.SH) ~ spq(Mcap.ff.nb$days) * Mcap.ff.nb$reef * Mcap.ff.nb$tdom + (1 | Mcap.ff.nb$colony), data=Mcap.ff.nb)
-
-anova(mod.nb, mod.nb2)
-dropterm(mod.nb3, test="Chisq")
-plot(mod.nb2)
-AIC(mod.nb, mod.nb1, mod.nb2, mod.nb3)
-formula(mod.nb)
-anova(mod.nb, mod.nb2)
-final <- lmerTest::step(mod.nb3, reduce.random=FALSE, alpha.fixed=0.01)
-formula(final$model)
-mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) + (1|colony), data=Mcap.ff.nb)   # MAKE FINAL MODEL
-mod.nb
-
-
-# Generate predictions and prediction intervals using bootMer over days 0-194
-pred.nb <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")), vis=factor("not bleached"), tdom=factor(c("C", "D")))
-bootfit <- bootMer(mod.nb, FUN=function(x) predict(x, pred.nb, re.form=NA), nsim=999)
-# Extract 90% confidence interval on predicted values
-pred.nb$fit <- predict(mod.nb, pred.nb, re.form=NA)
-pred.nb$lci <- apply(bootfit$t, 2, quantile, 0.05)
-pred.nb$uci <- apply(bootfit$t, 2, quantile, 0.95)
+pred.all$lci <- apply(bootfit$t, 2, quantile, 0.025)
+pred.all$uci <- apply(bootfit$t, 2, quantile, 0.975)
 
 
 #### Plotting function ----------
@@ -330,7 +296,9 @@ plotSH <- function(mod, pred) {
   datsumm <- data.frame(expand.grid(reef=levels(dat$reef), vis=levels(dat$vis),
                                     days=as.numeric(as.character(levels(factor(dat$`sp(days)`[,1]))))),
                         mean=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), FUN=mean)$x,
-                        sd=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), FUN=sd)$x)
+                        sd=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), FUN=sd)$x,
+                        se=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), 
+                                     FUN=function(x) sd(x)/sqrt(length(x)))$x)
   datlist <- split(datsumm, f=datsumm$reef)
   datlist <- lapply(datlist, function(x) split(x, f=x$vis))
   predlist <- split(pred, f=pred$reef)
@@ -352,7 +320,7 @@ plotSH <- function(mod, pred) {
       })
       # Plot raw data +/- standard deviation
       lapply(datlist[[reef]], function(vis) {
-        arrows(vis$days, vis$mean + vis$sd, vis$days, vis$mean - vis$sd, code=3, angle=90, length=0.05)
+        arrows(vis$days, vis$mean + vis$se, vis$days, vis$mean - vis$se, code=3, angle=90, length=0.05)
         points(vis$mean ~ vis$days, pch=vispch[[vis$vis[1]]], bg=visbg[[vis$vis[1]]], ylim=c(-7, 0.75))
       })
     })
@@ -361,9 +329,55 @@ plotSH <- function(mod, pred) {
                                        "2015-03-01", "2015-04-01", "2015-05-01")) - as.Date("2014-10-24")),
        labels=c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"))
 }
-
+#------------
 plotSH(mod.all, pred.all)
-plotSH(mod.nb, pred.nb)
+
+
+# NB corals only ----------
+# Subset data
+Mcap.ff.nb <- subset(Mcap.ff, vis=="not bleached")
+xyplot(log(tot.SH) ~ days | reef + tdom, groups = ~ colony, data=Mcap.ff.nb[order(Mcap.ff.nb$days), ],
+       type = "o", layout=c(3, 2), main="not bleached colonies")
+# - Analysis: symbiont abundance over full time series (October to May)
+# Build model
+sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
+#mod.nb <- lmerTest::lmer(log(tot.SH) ~ reef + (1|colony), data=Mcap.ff.nb)
+summary(mod.nb)
+dropterm(mod.nb, test="Chisq")
+anova(mod.nb, test="Chisq")
+mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(Mcap.ff.nb$days) * reef + (1|colony), data=Mcap.ff.nb)
+mod.nb1 <- lmerTest::lmer(log(tot.SH) ~ sp(Mcap.ff.nb$days) * (reef + tdom) + (1 | colony), data=Mcap.ff.nb)
+mod.nb2 <- lmerTest::lmer(log(tot.SH) ~ sp(Mcap.ff.nb$days) + reef + tdom + 
+                            sp(Mcap.ff.nb$days):reef + sp(Mcap.ff.nb$days):tdom +
+                            reef:tdom + (1 | colony), data=Mcap.ff.nb)
+mod.nb3 <- lmerTest::lmer(log(Mcap.ff.nb$tot.SH) ~ sp(Mcap.ff.nb$days) * Mcap.ff.nb$reef * Mcap.ff.nb$tdom + (1 | Mcap.ff.nb$colony), data=Mcap.ff.nb)
+summary(mod.nb3)
+dropterm(mod.nb3, test="Chisq")
+modsel <- step(mod.nb3, reduce.random = F, alpha.fixed = .05, ddf="Kenward-Roger")
+modsel
+summary(modsel$model)
+plot(modsel$model)
+dropterm(mod.lm, test="Chisq")
+anova(mod.nb, mod.nb1, mod.nb2, mod.nb3)
+
+plot(mod.nb2)
+AIC(mod.nb, mod.nb1, mod.nb2, mod.nb3)
+formula(mod.nb)
+anova(mod.nb, mod.nb2)
+final <- lmerTest::step(mod.nb3, reduce.random=FALSE, alpha.fixed=0.01)
+formula(final$model)
+mod.nb <- lmerTest::lmer(log(tot.SH) ~ sp(days) + (1|colony), data=Mcap.ff.nb)   # MAKE FINAL MODEL
+mod.nb
+
+
+# Generate predictions and prediction intervals using bootMer over days 0-194
+pred.nb <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")), vis=factor("not bleached"), tdom=factor(c("C", "D")))
+bootfit <- bootMer(mod.nb, FUN=function(x) predict(x, pred.nb, re.form=NA), nsim=999)
+# Extract 90% confidence interval on predicted values
+pred.nb$fit <- predict(mod.nb, pred.nb, re.form=NA)
+pred.nb$lci <- apply(bootfit$t, 2, quantile, 0.05)
+pred.nb$uci <- apply(bootfit$t, 2, quantile, 0.95)
+
 
 # • Figure 4: Recovery dynamics at different reefs --------------------------------------------------
 reefcols <- c("#bebada", "#8dd3c7", "#d9d9d9")
