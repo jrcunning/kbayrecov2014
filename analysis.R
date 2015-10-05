@@ -96,13 +96,12 @@ with(Mcap.f.summ[which(Mcap.f.summ$vis=="not bleached"), ], {
 Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
 bleach <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
 anova(bleach, test="F")  # tdom:vis significant, (reef is not significant if included)
-eff <- data.frame(effect("tdom:vis", bleach))[c(1,3,4), ]
 TukeyHSD(aov(bleach))  # Pairwise tests between groups
-# Differences between bleached and unbleached colonies only
-bleach2 <- lm(log(tot.SH) ~ vis, data=Mcap.ff.oct)
-summary(bleach2)
-eff2 <- data.frame(effect("vis", bleach2))
-exp(eff2$fit)  # S/H ratios in bleached vs. unbleached colonies
+eff <- data.frame(effect("tdom:vis", bleach), confidence.level=0.95)[c(1,3,4),]
+# Means and standard errors by vis only
+means <- aggregate(log(Mcap.ff.oct$tot.SH), by=list(Mcap.ff.oct$vis), FUN=mean)
+exp(means$x)  # S/H ratios in bleached vs. unbleached colonies
+exp(means$x[1]) / exp(means$x[2])
 # • Figure 2: Relationship between symbiont community and bleaching -------------------------------
 pdf("Figure2.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(4,2,1,1), mgp=c(1.75,0.5,0))
@@ -118,10 +117,10 @@ legend(par("usr")[2] * c(0.95,1.15), c(0.8, 1.0),
        legend=c("D", "C"), fill=c("gray95", "gray20"), xpd=NA, bty="n", cex=0.8, x.intersp=0.25)
 # Plot bleaching severity in October by tdom:vis
 par(mgp=c(2,0.5,0), mar=c(4,3.75,1,1))
-plot(eff$fit, ylim=c(-6,-1), ylab="", yaxs="i", cex.axis=0.5,
+plot(eff$fit, ylim=c(-5,-1.5), ylab="", yaxs="i", cex.axis=0.5,
      pch=21, bg="gray20", cex=2, line=1, bty="n", xpd=T, xaxt="n", xlab="", tck=-0.05, mgp=c(0.25,0.25,0))
 mtext(side=2, "ln S/H", line=2, cex=0.75)
-arrows(c(1,2,3), eff$lower, c(1,2,3), eff$upper, code=3, angle=90, length=0.075, xpd=T)
+arrows(c(1,2,3), eff$fit - eff$se, c(1,2,3), eff$fit + eff$se, code=3, angle=90, length=0.075, xpd=T)
 points(c(1,2,3), eff$fit, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, xpd=T)
 axis(side=1, at=c(1,2,3), labels=NA, tck=-0.05)
 text(c(1.5,2.5,3.5), par("usr")[3] - 0.3, xpd=T, srt=45, pos=2, cex=0.9,
@@ -266,6 +265,23 @@ bootfit <- bootMer(mod.all, FUN=function(x) predict(x, pred.all, re.form=NA), ns
 pred.all$fit <- predict(mod.all, pred.all, re.form=NA)
 pred.all$lci <- apply(bootfit$t, 2, quantile, 0.025)
 pred.all$uci <- apply(bootfit$t, 2, quantile, 0.975)
+# Calculate when bleached are no longer different from healthy at each reef
+data.frame(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=c(0,82))))
+plot(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=1:194)), multiline=T,
+     ci.style="bands")
+summary(mod.all)
+# CAN MODEL BE REFIT SO THAT QUADRATIC EFFECT IS ONLY ALLOWED FOR BLEACHED CORALS?
+mf <- model.frame(mod.all)
+obj <- mf[, "sp(days)"]
+obj[which(mf$vis=="not bleached"), 2] <- 0
+mf$`sp(days)` <- obj
+mf
+df <- Mcap.ff[!out, ]
+mod.all2 <- lmerTest::lmer(log(df$tot.SH) ~ obj * df$vis * df$reef + (1 | df$colony))
+summary(mod.all2)
+model.frame(mod.all2)
+plot(effect(c("reef"), mod.all2))
+mod.all <- mod.all2
 # • Figure 4: Recovery dynamics --------------------------------------------------
 # Plotting function
 plotreefs <- function(mod, pred) {
@@ -277,7 +293,9 @@ plotreefs <- function(mod, pred) {
                         mean=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), FUN=mean)$x,
                         sd=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), FUN=sd)$x,
                         se=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), 
-                                     FUN=function(x) sd(x)/sqrt(length(x)))$x)
+                                     FUN=function(x) sd(x)/sqrt(length(x)))$x,
+                        conf95=aggregate(dat$`log(tot.SH)`, by=list(interaction(dat$reef, dat$vis, dat$`sp(days)`[,1])), 
+                                       FUN=function(x) sd(x)/sqrt(length(x)) * qt(0.975, length(x)-1))$x)
   datlist <- split(datsumm, f=datsumm$reef)
   datlist <- lapply(datlist, function(x) rev(split(x, f=x$vis)))
   predlist <- split(pred, f=pred$reef)
@@ -298,7 +316,7 @@ plotreefs <- function(mod, pred) {
       })
       # Plot raw data +/- standard deviation
       lapply(datlist[[reef]], function(vis) {
-        arrows(vis$days, vis$mean + vis$se, vis$days, vis$mean - vis$se, code=3, angle=90, length=0.05, xpd=NA)
+        arrows(vis$days, vis$mean + vis$se, vis$days, vis$mean - vis$se, code=3, angle=90, length=0.03, xpd=NA)
         points(vis$mean ~ vis$days, pch=vispch[[vis$vis[1]]], bg=visbg[[vis$vis[1]]], ylim=c(-7, 0.75))
       })
     })
@@ -310,7 +328,7 @@ plotreefs <- function(mod, pred) {
   return(list(predlist=predlist, datlist=datlist))
 }
 # Plot
-pdf("Figure4.pdf", width=3.5, height=7)
+#pdf("Figure4.pdf", width=3.5, height=7)
 reefcols <- list(`25`="#bebada", `44`="#8dd3c7", HIMB="#d9d9d9")
 vislty <- list("bleached"=2, "not bleached"=1)
 vispch <- list("bleached"=24, "not bleached"=21)
@@ -336,12 +354,24 @@ for (reef in c("44", "25", "HIMB")) {
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
-
-
-
-
-
-
+# • Analysis: single time point statistics ----------------------
+# October (bleached)
+Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
+octmod <- lm(log(tot.SH) ~ reef * vis, data=Mcap.ff.oct)
+anova(octmod)  # only vis is significant
+octmod <- lm(log(tot.SH) ~ vis, data=Mcap.ff.oct)
+octmeans <- data.frame(Effect("vis", octmod))$fit
+anova(octmod)
+# January (recovered)
+Mcap.ff.jan <- Mcap.ff[which(Mcap.ff$fdate=="20150114"), ]
+janmod <- lm(log(tot.SH) ~ reef * vis, data=Mcap.ff.jan)
+summary(janmod)
+anova(janmod)
+janmean <- mean(log(Mcap.ff.jan$tot.SH))  # Grand geommean of january - no diff by reef or vis
+# Comparisons
+exp(octmeans[1])/exp(octmeans[2])  # Bleached are 88% lower than non-bleached in oct
+exp(octmeans) / exp(janmean)  # Rel to jan, oct vals 95% lower in bleached, 61% lower in not-bleached
+# Compare difference between OCt and Jan in each colony
 
 # • Analysis: Recovery of neighbors of C vs. neighbors of D ----------------
 C.nb <- as.numeric(as.character(unique(Mcap.ff.nb[which(Mcap.ff.nb$tdom=="C"), "sample"])))
