@@ -7,7 +7,7 @@
 # • Load libraries --------------------------------------------------------------------------------
 library(lme4); library(MASS); library(reshape2); library(lattice); library(lmerTest) 
 library(LMERConvenienceFunctions); library(pbkrtest); library(scales); library(RColorBrewer) 
-library(merTools); library(devtools); library(pBrackets)
+library(merTools); library(devtools); library(pBrackets); library(effects)
 ## SPIDA package available at http://r-forge.r-project.org/projects/spida/
 #system(paste("svn checkout svn://svn.r-forge.r-project.org/svnroot/spida/"))
 #devtools::install("spida/pkg")
@@ -115,7 +115,8 @@ filter.dups <- function(data) {
   return(result)
 }
 
-Mcap.f <- filter.dups(Mcap)
+Mcap.f <- filter.dups(Mcap)  # filter duplicate sample runs
+Mcap.f <- Mcap.f[which(!is.na(Mcap.f$tot.SH)), ]  # remove any entries with no data
 
 # # Analyze effect of filtering on Mcap Ct values
 # par(mfrow=c(2,1), mar=c(3,6,3,1))
@@ -132,7 +133,7 @@ Mcap.f <- filter.dups(Mcap)
 
 # # Identify overall dominant symbiont clade across time points based on mean proportion clade D
 meanpropD <- aggregate(Mcap.f$propD, by=list(colony=Mcap.f$colony), FUN=mean, na.rm=T)
-meanpropD$tdom <- ifelse(meanpropD$x > 0.5, "D", "C")
+meanpropD$tdom <- factor(ifelse(meanpropD$x > 0.5, "D", "C"))
 rownames(meanpropD) <- meanpropD$colony
 Mcap.f$tdom <- meanpropD[as.character(Mcap.f$colony), "tdom"]
 
