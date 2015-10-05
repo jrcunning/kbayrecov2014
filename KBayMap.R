@@ -32,22 +32,19 @@ axis(side=1, pos=1, xpd=T, tcl=0.3, lty=0,
 
 
 # Outline map
+# rgdal 
+library(rgdal)
+HI <- readOGR("coast_n83.shp", "coast_n83")  # units are in meters
+#plot(HI, xlim=c(624000, 628000), ylim=c(2368000, 2380000))
+HI <- spTransform(HI, CRS("+proj=longlat +datum=NAD83"))  # transform to lat/long
+plot(HI)
+summary(HI)
+#pdf(file = "kbaymap.pdf", height=6, width=4)
+par(mar=c(0,0,0,0))
+plot(HI)  # Hawaii
+plot(HI, xlim=c(-158.3, -157.6), ylim=c(21.2, 21.8))  # Oahu
+rect(-158.3, 21.2, -157.6, 21.8)
+plot(HI, xlim=c(-157.856807, -157.754123), ylim=c(21.403735, 21.525718))  #Kbay
+rect(-157.85607, 21.403735, -157.754132, 21.525718)
+points(reefcoords[,c(2,1)])
 
-install.packages("PBSmapping")
-library(PBSmapping)
-hawaii <- importGSHHS(file.path(.libPaths(), "PBSmapping/gshhs_f.b"), 
-                              xlim=c(199, 208) , ylim=c(19, 24) , maxLevel=4)
-plotMap(hawaii, col="grey", xlim=c(199,206), ylim=c(18,23))
-
-oahu <- importGSHHS(file.path(.libPaths(), "PBSmapping/gshhs_f.b"), 
-                     xlim=c(201.5, 202.5) , ylim=c(21, 22) , maxLevel=4)
-plotMap(oahu, col="grey", xlim=c(201.7, 202.37), ylim=c(21.2, 21.8))
-
-
-kbay <- importGSHHS(file.path(.libPaths(), "PBSmapping/gshhs_f.b"), 
-                     xlim=c(202.1, 202.4) , ylim=c(21.4, 21.6) , maxLevel=4)
-plotMap(kbay, col="grey", xlim=c(202.12, 202.28), ylim=c(21.4, 21.55))
-
-install.packages("gmt")
-library(gmt)
-gmt(demo.par)
