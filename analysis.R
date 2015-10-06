@@ -236,7 +236,8 @@ anova(modr, modr2, modr3, modr4)  # No significant effects of vis or date on pre
 #   From October to January, fit a quadratic polynomial (1st element of degree=2)
 #   From January to May, fit a linear model (2nd element of degree=1)
 #   Function is continuous at time=82 days (smooth=0)
-sp <- function(x) gsp(x, knots=c(82), degree=c(2,1), smooth=0)
+offset <- 0
+sp <- function(x) gsp(x, knots=c(82 - offset), degree=c(2,1), smooth=0)
 # Build and select model by backwards selection
 mod.all.full <- lmerTest::lmer(log(Mcap.ff$tot.SH) ~ sp(Mcap.ff$days) * Mcap.ff$vis * Mcap.ff$tdom * Mcap.ff$reef + (1 | Mcap.ff$colony))
 mod.all.full
@@ -267,21 +268,45 @@ pred.all$lci <- apply(bootfit$t, 2, quantile, 0.025)
 pred.all$uci <- apply(bootfit$t, 2, quantile, 0.975)
 # Calculate when bleached are no longer different from healthy at each reef
 data.frame(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=c(0,82))))
-plot(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=1:194)), multiline=T,
-     ci.style="bands")
+plot(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=1:194)), multiline=T, ci.style="bands")
+plot(Effect(c("reef", "vis", "days"), mod.all2, xlevels=list(days=-81:112)), multiline=T, ci.style="bands")
 summary(mod.all)
-# CAN MODEL BE REFIT SO THAT QUADRATIC EFFECT IS ONLY ALLOWED FOR BLEACHED CORALS?
-mf <- model.frame(mod.all)
-obj <- mf[, "sp(days)"]
-obj[which(mf$vis=="not bleached"), 2] <- 0
-mf$`sp(days)` <- obj
-mf
-df <- Mcap.ff[!out, ]
-mod.all2 <- lmerTest::lmer(log(df$tot.SH) ~ obj * df$vis * df$reef + (1 | df$colony))
+# ANALYZE MODEL COEFFICIENTS
+summary(mod.all)
+# SLOPES AT DAYS=0
+summary(mod.all)$coefficients[grep("D1", rownames(summary(mod.all)$coefficients)), ]
+  # reef 44 bleached is significantly increasing, HIMB bleached is sig. decr.,
+# SLOPES AT DAY=82
+newdat <- Mcap.ff
+offset <- 83
+newdat$days <- Mcap.ff$days - offset
+mod.all2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+timeslopes <- summary(mod.all2)$coefficients[grep("D1", rownames(summary(mod.all2)$coefficients)), ]
 summary(mod.all2)
-model.frame(mod.all2)
-plot(effect(c("reef"), mod.all2))
-mod.all <- mod.all2
+library(multcomp)
+# test for diff between bleached and not bleached @ HIMB
+test <- glht(mod.all2, linfct=matrix(c(0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,-1,0,0), 1))
+summary(test)
+# test for diff between bleached @ 44 and bleached @ HIMB
+test <- glht(mod.all2, linfct=matrix(c(0,0,0,0,0,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,0,0,0,0,0), 1))
+summary(test)
+# test for diff between bleached @ 44 and bleached @ HIMB
+test <- glht(mod.all2, linfct=matrix(c(0,1,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
+summary(test)
+
+
+# # CAN MODEL BE REFIT SO THAT QUADRATIC EFFECT IS ONLY ALLOWED FOR BLEACHED CORALS?
+# mf <- model.frame(mod.all)
+# obj <- mf[, "sp(days)"]
+# obj[which(mf$vis=="not bleached"), 2] <- 0
+# mf$`sp(days)` <- obj
+# mf
+# df <- Mcap.ff[!out, ]
+# mod.all2 <- lmerTest::lmer(log(df$tot.SH) ~ obj * df$vis * df$reef + (1 | df$colony))
+# summary(mod.all2)
+# model.frame(mod.all2)
+# plot(effect(c("reef"), mod.all2))
+# mod.all <- mod.all2
 # • Figure 4: Recovery dynamics --------------------------------------------------
 # Plotting function
 plotreefs <- function(mod, pred) {
