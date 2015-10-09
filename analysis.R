@@ -94,8 +94,9 @@ with(Mcap.f.summ[which(Mcap.f.summ$vis=="not bleached"), ], {
 
 # Analyze bleaching severity (S/H cell ratio) in October (peak of bleaching)
 Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
-bleach <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
+bleach <- lm(log(tot.SH) ~ tdom:vis*reef, data=Mcap.ff.oct)
 anova(bleach, test="F")  # tdom:vis significant, (reef is not significant if included)
+bleach <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
 TukeyHSD(aov(bleach))  # Pairwise tests between groups
 eff <- data.frame(effect("tdom:vis", bleach), confidence.level=0.95)[c(1,3,4),]
 # Means and standard errors by vis only
@@ -261,8 +262,18 @@ Mcap.ff[out, ]  # outlying data points
 mod.all <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=Mcap.ff[!out, ])
 summary(mod.all)  # look at parameter values
 anova(mod.all)
-pr <- summary(mod.all)$coefficients
-write.csv(summary(mod.all)$coefficients, file="coef.csv")
+dropterm(mod.all, test="Chisq")
+# MODEL SUMMARY
+# pseudo-r2 value-- squared correlation between fitted and observed values
+summary(lm(model.response(model.frame(mod.all)) ~ fitted(mod.all)))$r.squared
+# psuedo-r2 value-- residual variance of full model compared to intercept-only model
+1-var(residuals(mod.all))/(var(model.response(model.frame(mod.all))))
+# R2 calculation according to rsquared.glmm
+sem.model.fits(mod.all)
+# write.csv(summary(mod.all)$coefficients, file="coef.csv")
+pred.oct <- expand.grid(days=0, reef=factor(c("25", "44", "HIMB")), vis=factor(c("bleached", "not bleached")))
+predict(mod.all, pred.oct, re.form=NA, interval="confidence")
+data.frame(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=c(1,82))))
 # Generate predictions and confidence intervals using bootMer
 pred.all <- expand.grid(days=seq(0,194,1), reef=factor(c("44", "25", "HIMB")),
                          vis=factor(c("bleached", "not bleached")))
@@ -276,133 +287,221 @@ data.frame(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=c(0,82)))
 plot(Effect(c("reef", "vis", "days"), mod.all, xlevels=list(days=1:194)), multiline=T, ci.style="bands")
 plot(Effect(c("reef", "vis", "days"), mod.all2, xlevels=list(days=-81:112)), multiline=T, ci.style="bands")
 summary(mod.all)
-# ANALYZE MODEL COEFFICIENTS
-summary(mod.all)
-fixef(mod.all)
-# SLOPES AT DAYS=0 -- test if each group is diff than zero
-contrmat <- matrix(ncol=24, byrow=T, data=
-                     c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # 25.bleached == 0
-                       0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # 25.notbleached == 0
-                       0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,  # 44.bleached == 0
-                       0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,  # 44.notbleached == 0
-                       0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,  # HIMB.bleached == 0
-                       0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0)  # HIMB.notbleached == 0
-                   )
-rownames(contrmat) <- c("25.bleached","25.notbleached","44.bleached","44.notbleached",
-                        "HIMB.bleached","HIMB.notbleached")
-cust <- matrix(contrmat[1,] - contrmat[2,], nrow=1)
-test <- glht(mod.all, linfct=contrmat)
-test <- glht(mod.all, linfct=cust)
-summary(test)
-
-# Get model matrix defining each reef-vis group
+# GENERAL LINEAR HYPOTHESIS TESTING
+# Get model matrix defining slopes for each reef-vis group
 mm <- unique(model.matrix(mod.all)[which(model.matrix(mod.all)[,"sp(days)D1(0)"]==82),])
 rownames(mm) <- interaction(model.frame(mod.all)[rownames(mm), c("reef", "vis")])
 mm[, grep("D1", colnames(mm), invert = T)] <- 0
 mm <- (mm!=0) * 1
 grp <- function(group) subset(mm, grepl(group, rownames(mm)))
-
-test <- glht(mod.all, linfct=grp("HIMB.bleached")-grp("HIMB.not bleached"))
-summary(test)
-test <- glht(mod.all, linfct=grp("44.bleached")-grp("HIMB.not bleached"))
-summary(test)
+# Test slopes at day 0 for each group, compare to zero
 test <- glht(mod.all, linfct=mm)
 summary(test)
-
-slopecoefs <- names(fixef(mod.all))[grep("D1", names(fixef(mod.all)))]
-slopecoefs[unique(c(1, grep("44", slopecoefs), grep("visnot bleached", slopecoefs)))]
-c("44", "bleached") %in% slopecoefs
-rownames(slopecoefs) <- rownames(summary(mod.all)$coefficients)[]
-slopecoefs
-names(fixef(mod.all))
-null <- matrix(0, 1, length(fixef(mod.all)))
-
-test <- glht(mod.all, linfct=null)
+# Test vis within reefs to each other
+test <- glht(mod.all, linfct=grp("HIMB.bleached")-grp("HIMB.not bleached"))
 summary(test)
-
-summary(mod.all)$coefficients[grep("D1", rownames(summary(mod.all)$coefficients)), ]
-# HIMB not bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0), 1))
+test <- glht(mod.all, linfct=grp("44.bleached")-grp("44.not bleached"))
 summary(test)
-# HIMB bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0), 1))
+test <- glht(mod.all, linfct=grp("25.bleached")-grp("25.not bleached"))
 summary(test)
-# 44 not bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0), 1))
-summary(test)
-# 44 bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
-summary(test)
-# 25 not bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
-summary(test)
-# 25 bleached
-test <- glht(mod.all, linfct=matrix(c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
-summary(test)
-
-
-
-# SLOPES AT DAY=150
+# CENTER DAYS AT 150 TO TEST SLOPES DURING JAN-MAY
 newdat <- Mcap.ff[!out, ]
 offset <- 150
 newdat$days <- newdat$days - offset
 mod.all2 <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
-#timeslopes <- summary(mod.all2)$coefficients[grep("D1", rownames(summary(mod.all2)$coefficients)), ]
-summary(mod.all2)
-### SLOPE OF POST_RECOV (JAN_MAY)
-# Test 25 bleached == 0
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
+# Test slopes at day 150 for each group, compare to zero
+test <- glht(mod.all2, linfct=mm)
 summary(test)
-# Test 25 not bleached == 0
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
+# Test vis within reefs to each other
+test <- glht(mod.all2, linfct=grp("HIMB.bleached")-grp("HIMB.not bleached"))
 summary(test)
-# Test 25 bleached vs. 25 not bleached
-test <- glht(mod.all, linfct=matrix(c(0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
+test <- glht(mod.all2, linfct=grp("44.bleached")-grp("44.not bleached"))
 summary(test)
-# Test 44 bleached == 0 ?????
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0), 1))
+test <- glht(mod.all2, linfct=grp("25.bleached")-grp("25.not bleached"))
 summary(test)
-# Test 44 not bleached ==0
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0), 1))
+names(summary(test))
+summary(test)$test$coefficients
+summary(test)$test$pvalues
+# TEST CENTER AT EACH DAY FROM 0-82
+slope <- matrix(0, ncol=6, nrow=83, dimnames=list(day=1:83, group=rownames(mm)))
+diff0 <- matrix(0, ncol=6, nrow=83, dimnames=list(day=1:83, group=rownames(mm)))
+for (day in 0:82) {
+  offset <- day
+  newdat <- Mcap.ff[!out, ]
+  newdat$days <- newdat$days - offset
+  mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+  test <- glht(mod, linfct=mm)
+  slope[day + 1, ] <- summary(test)$test$coefficients
+  diff0[day + 1, ] <- summary(test)$test$pvalues
+}
+slope
+diff0
+range(result)
+plot(result[,1], ylim=c(-0.07, 0.12), type="l")
+lines(result[,3])
+lines(result[,6])
+abline(h=0, lty=2)
+# TEST DIFF BETWEEN BLEACHED AND NOTBLEACHED MEAN RESPONSE AT EACH REEF
+# Get model matrix defining mean response (intercept) for each reef-vis group
+mm <- unique(model.matrix(mod.all)[which(model.matrix(mod.all)[,"sp(days)D1(0)"]==0),])
+rownames(mm) <- interaction(model.frame(mod.all)[rownames(mm), c("reef", "vis")])
+grp <- function(group) subset(mm, grepl(group, rownames(mm)))
+diffs <- matrix(0, ncol=3, nrow=83, dimnames=list(day=1:83, reef=c("44.NB-B", "25.NB-B", "HIMB.NB-B")))
+pvals <- matrix(0, ncol=3, nrow=83, dimnames=list(day=1:83, reef=c("44.NB-B", "25.NB-B", "HIMB.NB-B")))
+for (day in 0:82) {
+  # calculate mean response of each group (vis:reef) on each day 
+  # test diff. btw. bleached-notbleached at each reef
+  offset <- day
+  newdat <- Mcap.ff[!out, ]
+  newdat$days <- newdat$days - offset
+  mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+  tests <- glht(mod, linfct=rbind(grp("44.not bleached")-grp("44.bleached"),
+                                  grp("25.not bleached")-grp("25.bleached"),
+                                  grp("HIMB.not bleached")-grp("HIMB.bleached")),
+                alternative="greater")  # test null hypothesis that NB is greater than B
+  diffs[(day + 1), ] <- summary(tests)$test$coefficients
+  pvals[(day + 1), ] <- summary(tests)$test$pvalues
+}
+pvals
+bnb <- apply(pvals, 2, function(x) x>=0.01)  # TRUE means no difference between bleached-notbleached
+when <- apply(bnb, 2, function(x) which(diff(x)==1))
+as.Date("2014-10-24", format="%F") + when  # Dates when NB not greater than B at each reef
+# Test differences among groups at individual time points
+# Test difference between bleached and not bleached corals at day 0
+offset <- 0
+newdat <- Mcap.ff[!out, ]
+newdat$days <- newdat$days - offset
+mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+test <- glht(mod, linfct=mcp(vis="Tukey", interaction_average = T, covariate_average = F),
+             alternative="greater")
 summary(test)
-# Test HIMB bleached == 0
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0), 1))
+# Test difference between reefs at day 0
+offset <- 0
+newdat <- Mcap.ff[!out, ]
+newdat$days <- newdat$days - offset
+mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+test <- glht(mod, linfct=mcp(reef="Tukey", interaction_average = T, covariate_average = F),
+             alternative="two.sided")
 summary(test)
-# Test HIMB not bleached == 0
-test <- glht(mod.all, linfct=matrix(c(0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1), 1))
+# Test difference between not bleached corals across reefs at day 0
+offset <- 0
+newdat <- Mcap.ff[!out, ]
+newdat$days <- newdat$days - offset
+mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+test <- glht(mod, linfct=rbind(grp("HIMB.not bleached")-grp("25.not bleached"),
+                               grp("HIMB.not bleached")-grp("44.not bleached"),
+                               grp("25.not bleached")-grp("44.not bleached")),
+             alternative="two.sided")
 summary(test)
+
+# Test difference between bleached and not bleached corals at day 82
+offset <- 82
+newdat <- Mcap.ff[!out, ]
+newdat$days <- newdat$days - offset
+mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+test <- glht(mod, linfct=mcp(vis="Tukey", interaction_average = T, covariate_average = F),
+             alternative="greater")
+summary(test)
+# Test difference between bleached and not bleached corals at day 194
+offset <- 194
+newdat <- Mcap.ff[!out, ]
+newdat$days <- newdat$days - offset
+mod <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=newdat)
+test <- glht(mod, linfct=mcp(vis="Tukey", interaction_average = T, covariate_average = F),
+             alternative="greater")
+summary(test)
+
+###LSMEANS PACKAGE  --- alpha = 0.01
+library(lsmeans)
+# Compare bleached vs. not-bleached at each reef and averaged across reefs at day 0 -- ALL DIFF
+mod.ref.grid <- ref.grid(mod.all, at=list(days=c(0)))
+#rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis)))  # two-tailed tests
+test(rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis))), side = "<")  # one-tailed test (Ha: B < NB)
+
+# Compare bleached vs. not-bleached at each reef and averaged across reefs at day 82 -- NO DIFF
+mod.ref.grid <- ref.grid(mod.all, at=list(days=c(82)))
+#rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis)))  # two-tailed tests
+test(rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis))), side = "<")  # one-tailed test (Ha: B < NB)
+
+# Compare bleached vs. not-bleached at each reef and averaged across reefs at day 194
+mod.ref.grid <- ref.grid(mod.all, at=list(days=c(194)))
+rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis)))  # two-tailed tests
+test(rbind(pairs(mod.ref.grid, by="reef"), pairs(lsmeans(mod.ref.grid, ~ vis))), side = "<")  # one-tailed test (Ha: B < NB)
+lsmeans(mod.ref.grid, ~ vis)
+# ALL BLEACHED ARE LOWER THAN NON-BLEACHED, BUT NO DIFFs AT INDIVIDUAL REEFS
+lsmeans(mod.ref.grid, specs=c("vis", "reef"), contr="cld", alpha=0.01)
+
+# Compare Bleached to Non-bleached corals at each reef at each day from 0 through 82,
+#   with p-value adjustments (method mvt) based on the number of tests on each day (3)
+pvals.1t <- matrix(0, nrow=83, ncol=3, dimnames=list(days=as.character(0:82), reef=levels(Mcap$reef)))
+for(day in 0:82) {
+  mod.ref.grid <- ref.grid(mod.all, at=list(days=day))
+  pvals[day + 1, ] <- summary(rbind(pairs(mod.ref.grid, by="reef")))$p.value
+  pvals.1t[day + 1, ] <- test(pairs(mod.ref.grid, by="reef"), side="<")$p.value
+}
+# Find which day/date pvalue is > 0.01 (no longer significantly different) at each reef
+daystilrecov <- apply(pvals.1t, 2, function(x) match(F, x < 0.01)) - 1
+datestilrecov <- as.Date("2014-10-24", format="%F") + daystilrecov
+datestilrecov
 
 
 
 
-library(multcomp)
-# test for diff between bleached and not bleached @ HIMB
-test <- glht(mod.all2, linfct=matrix(c(0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,-1,0,0), 1))
-summary(test)
-# test for diff between bleached @ 44 and bleached @ HIMB
-test <- glht(mod.all2, linfct=matrix(c(0,0,0,0,0,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,0,0,0,0,0), 1))
-summary(test)
-# test for diff between bleached @ 44 and bleached @ HIMB
-test <- glht(mod.all2, linfct=matrix(c(0,1,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,0,0,0,0), 1))
-summary(test)
+
+#reef 44
+reef44 <- matrix(0, ncol=82)
+for(day in 1:82) {
+  mod.ref.grid <- ref.grid(mod.all, at=list(reef="44", days=day))
+  reef44[day] <- summary(pairs(mod.ref.grid))$p.value
+}
+reef44
+#HIMB
+HIMB <- matrix(0, ncol=82)
+for(day in 1:82) {
+  mod.ref.grid <- ref.grid(mod.all, at=list(reef="HIMB", days=day))
+  HIMB[day] <- summary(pairs(mod.ref.grid))$p.value
+}
+HIMB
 
 
 
 
 
 
-# # CAN MODEL BE REFIT SO THAT QUADRATIC EFFECT IS ONLY ALLOWED FOR BLEACHED CORALS?
-# mf <- model.frame(mod.all)
-# obj <- mf[, "sp(days)"]
-# obj[which(mf$vis=="not bleached"), 2] <- 0
-# mf$`sp(days)` <- obj
-# mf
-# df <- Mcap.ff[!out, ]
-# mod.all2 <- lmerTest::lmer(log(df$tot.SH) ~ obj * df$vis * df$reef + (1 | df$colony))
-# summary(mod.all2)
-# model.frame(mod.all2)
-# plot(effect(c("reef"), mod.all2))
-# mod.all <- mod.all2
+
+#lsmeans(mod.ref.grid, specs=c("days", "reef", "vis"), contr="pairwise", adjust="tukey")
+
+
+
+lsmeans(mod.ref.grid, pairwise ~ vis | reef, adjust="scheffe")
+lsmeans(mod.ref.grid, specs="vis", by="reef", adjust="sidak")
+lsmeans(mod.ref.grid, pairwise ~ vis)
+str(obj1)
+obj1
+
+merge(obj1, obj2)
+cld(obj)
+class(obj1)
+
+mod.ref.grid <- ref.grid(mod.all, at=list(days=0, reef="25"))
+mod.ref.grid
+lsmeans(mod.ref.grid, specs=c("days", "reef", "vis"), contr=tpw)
+tpw <- pairwise.lsmc(levs=c("bleached", "not bleached"))
+
+lsmeans(mod.ref.grid, specs=c("days", "vis", "reef"), contr=tpw, adjust="none")
+
+mod.ref.grid <- ref.grid(mod.all, at=list(days=c(0,82,194)))
+mod.ref.grid <- ref.grid(mod.all, at=list(days=c(194)))
+lsmeans(mod.ref.grid, specs=c("days", "reef", "vis"), contr="cld")
+
+lsmeans(mod.all, specs=c("days", "reef", "vis"), contr="cld")
+lsmeans(mod.all, ~ days)
+
+?lsmeans
+
+
+
+#
 # • Figure 4: Recovery dynamics --------------------------------------------------
 # Plotting function
 plotreefs <- function(mod, pred) {
@@ -475,35 +574,38 @@ for (reef in c("44", "25", "HIMB")) {
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
+
 # • Analysis: single time point statistics ----------------------
 # October (bleached)
 Mcap.ff.oct <- Mcap.ff[which(Mcap.ff$fdate=="20141024"), ]
-octmod <- lm(log(tot.SH) ~ reef * vis, data=Mcap.ff.oct)
+octmod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.oct)
 anova(octmod)  # only vis is significant
 octmod <- lm(log(tot.SH) ~ vis, data=Mcap.ff.oct)
 octmeans <- data.frame(Effect("vis", octmod))$fit
+exp(octmeans)
 anova(octmod)
 # January (recovered)
-Mcap.ff.jan <- Mcap.ff[which(Mcap.ff$fdate=="20150114"), ]
-janmod <- lm(log(tot.SH) ~ reef * vis, data=Mcap.ff.jan)
+Mcap.ff.jan <- Mcap.ff[!out, ][which(Mcap.ff[!out, ]$fdate=="20150114"), ]
+janmod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.jan)
+anova(janmod)
+janmod <- lm(log(tot.SH) ~ 1, data=Mcap.ff.jan)
 summary(janmod)
 anova(janmod)
 janmean <- mean(log(Mcap.ff.jan$tot.SH))  # Grand geommean of january - no diff by reef or vis
 # Comparisons
 exp(octmeans[1])/exp(octmeans[2])  # Bleached are 88% lower than non-bleached in oct
 exp(octmeans) / exp(janmean)  # Rel to jan, oct vals 95% lower in bleached, 61% lower in not-bleached
-# Compare difference between OCt and Jan in each colony
+# May (post-recov)
+Mcap.ff.may <- Mcap.ff[!out, ][which(Mcap.ff[!out, ]$fdate=="20150506"), ]
+maymod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.may)
+anova(maymod)
+maymod <- lm(log(tot.SH) ~ vis, data=Mcap.ff.may)
+anova(maymod)
+data.frame(effect("vis", maymod))
+exp(data.frame(effect("vis", maymod))$fit)
 
-# • Analysis: Recovery of neighbors of C vs. neighbors of D ----------------
-C.nb <- as.numeric(as.character(unique(Mcap.ff.nb[which(Mcap.ff.nb$tdom=="C"), "sample"])))
-D.nb <- as.numeric(as.character(unique(Mcap.ff.nb[which(Mcap.ff.nb$tdom=="D"), "sample"])))
-Mcap.ff.b$neighbor <- factor(ifelse(Mcap.ff.b$sample %in% (C.nb - 1), "C", "D"))
-Mcap.ff.b.octjan <- Mcap.ff.b[which(Mcap.ff.b$days %in% c(0, 11, 31, 52, 82)), ]
-model <- lmerTest::lmer(log(tot.SH) ~ poly(days, 2) * neighbor * reef + (1 | sample), data=Mcap.ff.b.octjan)
-summary(model)
-dropterm(model, test="Chisq")
-plot(Effect(c("days", "neighbor"), model), multiline=T)
-plot(log(tot.SH) ~ days, col=reef, data=Mcap.ff.b.octjan)
+
+
 # =================================================================================================
 # • Temperature data ---------------------------------------------------------------
 # Import temperature data
