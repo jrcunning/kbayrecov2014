@@ -41,8 +41,8 @@ hist(meanpropD$x, breaks=10)$counts
 # # Analyze proportions of dominant symbionts across reefs
 # chisq2 <- chisq.test(cladecomp$reef, cladecomp$tdom)
 # chisq2$observed; chisq2$p.value  # No differences
-# • Figure 1: Overall symbiont community composition in Montipora capitata  ---------------
-pdf(file="Figure1.pdf", height=3, width=3)
+# • Figure 2: Overall symbiont community composition in Montipora capitata  ---------------
+pdf(file="Figure2*.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
 hist(propD, plot=T, main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60")
@@ -102,15 +102,16 @@ anova(bleach, test="F")  # tdom:vis significant, (reef is not significant if inc
 bleach <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
 TukeyHSD(aov(bleach))  # Pairwise tests between groups
 eff <- data.frame(effect("tdom:vis", bleach), confidence.level=0.95)[c(1,3,4),]
-# Means and standard errors by vis only
-means <- aggregate(log(Mcap.ff.oct$tot.SH), by=list(Mcap.ff.oct$vis), FUN=mean)
-exp(means$x)  # S/H ratios in bleached vs. unbleached colonies
-exp(means$x[1]) / exp(means$x[2])
+# Compare means of bleached vs. not bleached in october
+means <- t.test(log(Mcap.ff.oct[which(Mcap.ff.oct$vis=="bleached"), "tot.SH"]),
+       log(Mcap.ff.oct[which(Mcap.ff.oct$vis=="not bleached"), "tot.SH"]))
+exp(means$estimate)  # S/H ratios in bleached vs. unbleached colonies
+means$p.value  # p-value for difference between bleached vs. unbleached in october
 # total vs. propD
 plot(log(tot.SH) ~ asin(sqrt(propD)), data=Mcap.ff.oct,
      pch=c(24,21)[vis], bg=c("white", "black")[vis])
-# • Figure 2: Relationship between symbiont community and bleaching -------------------------------
-pdf("Figure2.pdf", height=3, width=3)
+# • Figure 3: Relationship between symbiont community and bleaching -------------------------------
+pdf("Figure3*.pdf", height=3, width=3)
 par(mfrow=c(1,2), mar=c(4,2,1,1), mgp=c(1.75,0.5,0))
 # Plot barplot of C and D dominance in bleached and healthy corals
 bars <- barplot(t(as.matrix(vis.chi$observed / rowSums(vis.chi$observed))), beside=F, xaxt="n", yaxt="n",
@@ -140,10 +141,11 @@ clades <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef", "tdom"), measu
 clades$value <- as.numeric(factor(clades$value))
 clades <- dcast(clades, vis + colony + reef + tdom ~ date, drop=T)
 clades[is.na(clades)] <- -1  # Recode missing values as -1
+clades[which(clades$colony=="129"), 8:10] <- -2  # Recode mortality as -2
 clades.m0 <- clades[with(clades, order(rev(vis), tdom, clades[, 5], clades[, 6], clades[, 7], 
                                     clades[, 8], clades[, 9], clades[, 10])), ]
-clades.m <- as.matrix(clades.m0[,5:10], row.names=as.character(clades.m0$colony))
-rownames(clades.m) <- as.character(clades$colony)
+clades.m <- as.matrix(clades.m0[,5:10])
+rownames(clades.m) <- as.character(clades.m0$colony)
 # How many colonies showed variable dominant symbionts over time
 doms <- aggregate(Mcap.f$dom, by=list(colony=Mcap.f$colony), FUN=paste)
 rownames(doms) <- doms$colony
@@ -155,13 +157,41 @@ model <- glm(domswitch ~ vis + reef + tdom, data=df, family=binomial)
 dropterm(model, test="Chisq")
 chisq.test(df$tdom, df$domswitch)$observed
 chisq.test(df$vis, df$domswitch)$observed
-# • Figure 3: Symbiont community structure in each colony over time ----------------------------------------
-pdf("Figure3.pdf", width=3.5, height=6)
+
+# new domswitch analysis
+doms <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef"), measure.vars="dom",
+               factorsAsStrings=FALSE)
+doms <- dcast(doms, vis + colony + reef ~ date, drop=T)
+domswitch <- data.frame(t(apply(doms[,4:9], 1, FUN=function(x) diff(as.numeric(factor(x))))))
+colnames(domswitch) <- levels(Mcap.f$fdate)[-1]
+CtoD <- cbind(doms[,1:3], ifelse(domswitch==1,1,0))
+DtoC <- cbind(doms[,1:3], ifelse(domswitch==-1,1,0))
+
+CtoD.m <- melt(CtoD, id.vars=c("colony", "vis", "reef"), value.name="CtoD", variable.name="fdate")
+DtoC.m <- melt(DtoC, id.vars=c("colony", "vis", "reef"), value.name="DtoC", variable.name="fdate")
+
+CtoD.mod <- glm(CtoD ~ vis * reef * fdate, data=CtoD.m, family="binomial")
+newmod <- stepAIC(CtoD.mod)
+formula(newmod)
+summary(newmod)
+lsmeans(newmod, specs = c("fdate", "vis"))
+
+DtoC.mod <- glm(DtoC ~ vis * reef * fdate, data=DtoC.m, family="binomial")
+anova(DtoC.mod, test="Chisq")
+lsmeans(DtoC.mod, specs="reef")
+
+summary(CtoD.mod)
+anova(newmod, test="Chisq")
+dropterm(newmod, test="Chisq")
+plot(effect("vis:fdate", newmod))
+
+# • Figure 4: Symbiont community structure in each colony over time ----------------------------------------
+pdf("Figure4*.pdf", width=3.5, height=6)
 par(mfrow=c(1,1), mar=c(3,5,2,2), bg="white")
 image(x=seq(1, ncol(clades.m)), y=seq(1, nrow(clades.m)), z=t(clades.m), 
       xaxt="n", yaxt="n", xlab="", ylab="",
-      breaks=c(-1,0,1,2,3,4,5),
-      col=c("white", rev(brewer.pal(11, "RdYlBu")[c(2,1,3,9,11)])))
+      breaks=c(-2,-1.1,0,1,2,3,4,5),
+      col=c("black", "white", rev(brewer.pal(11, "RdYlBu")[c(2,1,3,9,11)])))
 # Plot date axis
 axis(side=3, at=seq(1:6), labels=FALSE, cex.axis=0.75, par("tck"=-0.025), xpd=T)
 text(1:6, par("usr")[4], xpd=T, cex=0.6, pos=3,
@@ -172,8 +202,8 @@ text(par("usr")[1] - 1.75, quantile(par("usr")[3:4])[c(2, 4)], labels=c("Not Ble
      srt=90, xpd=2)
 # Plot Row Side Colors
 reefcols <- c("#bebada", "#8dd3c7", "#d9d9d9")
-for (i in 1:nrow(clades)) {
-  reef <- clades$reef[i]
+for (i in 1:nrow(clades.m0)) {
+  reef <- clades.m0$reef[i]
   rect(par("usr")[1] - 1.25, par("usr")[3] + 1 * (i - 1), 
        par("usr")[1] - 0.25, par("usr")[3] + 1 * (i - 1) + 1, col=reefcols[as.numeric(reef)],
        xpd=T, border=NA)
@@ -201,18 +231,20 @@ rect(par("usr")[1] - 1.25, quantile(par("usr")[3:4], 0) * -1.05,
 axis(side=2, xpd=T, pos=par("usr")[1] - 1.25, lwd=0, lwd.ticks=0,
      at=c(-1, -2, -3), labels=c("Rf 25", "Rf 44", "HIMB"), las=2, cex.axis=0.6, mgp=c(0,0.4,0))
 # Plot Heatmap Key
-for (i in 1:5) {
-  rect(quantile(par("usr")[1:2], 0.1666 * i), quantile(par("usr")[3:4], 0) * -1.05,
-       quantile(par("usr")[1:2], 0.1666 * (i + 1)), quantile(par("usr")[3:4], 0) * -1.05 - 1, xpd=T,
-       border=NA, col=c(brewer.pal(11, "RdYlBu")[c(1,3,9,11)], "white")[i])
+x <- quantile(par("usr")[1:2], probs=seq(0, 1, length.out=7))
+y <- rep(quantile(par("usr")[3:4], 0) * -1.05, 2) - c(0, 1)
+rect(x[1], y[1], x[7], y[2], xpd=T)
+for (i in 1:6) {
+  rect(x[i], y[1], x[i + 1], y[2], xpd=T,
+       border=NA, col=c(brewer.pal(11, "RdYlBu")[c(1,3,9,11)], "white", "black")[i])
 }
-rect(quantile(par("usr")[1:2], 0.1666), quantile(par("usr")[3:4], 0) * -1.05, 
-     quantile(par("usr")[1:2], 0.1666 * 6), quantile(par("usr")[3:4], 0) * -1.05 - 1, xpd=T)
-text(xpd=T, y=quantile(par("usr")[3:4], 0) * -1.05 - 0.75, pos=1, cex=0.6,
-     x=seq(par("usr")[1], par("usr")[2], length=7)[-c(1,7)] + 0.5, 
-     labels=c("D only", "D > C", "C > D", "C only", "no data"))
+
+
+text(xpd=T, y=y[1] - 0.75, pos=1, cex=0.6,
+     x=seq(par("usr")[1], par("usr")[2], length=7)[-7] + 0.5, 
+     labels=c("D only", "D > C", "C > D", "C only", "no data", "dead"))
 text(xpd=T, y=quantile(par("usr")[3:4], 0) * -1.05 - 2.5, pos=1, cex=0.9,
-     x=quantile(par("usr")[1:2], 0.5833),
+     x=quantile(par("usr")[1:2], 0.5),
      labels=expression(italic(Symbiodinium)~clades))
 dev.off()
 # • Analysis: Presence of background clade D and mixtures -----------------------------------------
@@ -221,6 +253,7 @@ Cbleach <- Mcap.f[which(Mcap.f$tdom=="C" & Mcap.f$vis=="bleached"), ]
 mod <- glmer(propD!=0 ~ fdate + (1|reef/colony), data=Cbleach, family=binomial)
 mod
 summary(mod)
+dropterm(mod, test="Chisq")
 # Look at presence of background clade D in bleached vs. non-bleached C colonies across all time points
 Ccol <- Mcap.f[which(Mcap.f$tdom=="C"), ]
 modr <- glmer(propD!=0 ~ vis * fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
@@ -235,6 +268,10 @@ modr2 <- glmer(mixed ~ vis + fdate + (1|reef/colony), data=Ccol, family=binomial
 modr3 <- glmer(mixed ~ fdate + (1|reef/colony), data=Ccol, family=binomial(link="logit"))
 modr4 <- glmer(mixed ~ (1|reef/colony), data=Ccol, family=binomial(link="logit"))
 anova(modr, modr2, modr3, modr4)  # No significant effects of vis or date on presence of C/D mixtures
+# Analysis of transitions (i.e., shuffling)
+
+
+
 # =================================================================================================
 # RECOVERY
 # =================================================================================================
@@ -309,7 +346,7 @@ lstrends(mod.all, specs=c("reef", "vis"), var="days", at=list(days=150), contr="
 
 
 #
-# • Figure 4: Recovery dynamics --------------------------------------------------
+# • Figure 5: Recovery dynamics --------------------------------------------------
 # Plotting function
 plotreefs <- function(mod, pred) {
   dat <- model.frame(mod)
@@ -355,7 +392,7 @@ plotreefs <- function(mod, pred) {
   return(list(predlist=predlist, datlist=datlist))
 }
 # Plot
-#pdf("Figure4.pdf", width=3.5, height=7)
+pdf("Figure5*.pdf", width=3.5, height=7)
 reefcols <- list(`25`="#bebada", `44`="#8dd3c7", HIMB="#d9d9d9")
 vislty <- list("bleached"=2, "not bleached"=1)
 vispch <- list("bleached"=24, "not bleached"=21)
@@ -380,7 +417,7 @@ for (reef in c("44", "25", "HIMB")) {
 # add zoom lines
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
-#dev.off()
+dev.off()
 
 # • Analysis: single time point statistics ----------------------
 # October (bleached)
@@ -413,6 +450,13 @@ exp(data.frame(effect("vis", maymod))$fit)
 maymean <- mean(log(Mcap.ff.may$tot.SH))  # Grand geommean of january
 exp(maymean)
 
+
+# Nonbleached by date
+mod <- lmer(log(tot.SH) ~ fdate + (1|colony), data=Mcap.ff[which(Mcap.ff$vis=="not bleached"), ])
+anova(mod)
+mod.ref.grid <- ref.grid(mod, at=list(fdate=c("20141024", "20150114", "20150506")))
+contrast(mod.ref.grid, specs="fdate", method="pairwise")
+lsmeans(mod.ref.grid, specs="fdate")
 
 # =================================================================================================
 # • Temperature data ---------------------------------------------------------------
