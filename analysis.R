@@ -153,7 +153,8 @@ domswitch <- lapply(doms$x, function(x) any(diff(as.numeric(factor(x)))!=0))  # 
 domswitch <- data.frame(colony=doms$colony, domswitch=unlist(domswitch))
 table(domswitch$domswitch)
 df <- merge(domswitch, Mcap.f.summ)
-model <- glm(domswitch ~ vis + reef + tdom, data=df, family=binomial)
+model <- glm(domswitch ~ vis * reef * tdom, data=df, family=binomial)
+anova(model, test="F")
 dropterm(model, test="Chisq")
 chisq.test(df$tdom, df$domswitch)$observed
 chisq.test(df$vis, df$domswitch)$observed
@@ -164,26 +165,50 @@ doms <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef"), measure.vars="d
 doms <- dcast(doms, vis + colony + reef ~ date, drop=T)
 domswitch <- data.frame(t(apply(doms[,4:9], 1, FUN=function(x) diff(as.numeric(factor(x))))))
 colnames(domswitch) <- levels(Mcap.f$fdate)[-1]
+shuff <- cbind(doms[,1:3], ifelse(domswitch==0,0,1))
 CtoD <- cbind(doms[,1:3], ifelse(domswitch==1,1,0))
 DtoC <- cbind(doms[,1:3], ifelse(domswitch==-1,1,0))
-
+shuff.m <- melt(shuff, id.vars=c("colony", "vis", "reef"), value.name="shuff", variable.name="fdate")
 CtoD.m <- melt(CtoD, id.vars=c("colony", "vis", "reef"), value.name="CtoD", variable.name="fdate")
 DtoC.m <- melt(DtoC, id.vars=c("colony", "vis", "reef"), value.name="DtoC", variable.name="fdate")
 
-CtoD.mod <- glm(CtoD ~ vis * reef * fdate, data=CtoD.m, family="binomial")
-newmod <- stepAIC(CtoD.mod)
-formula(newmod)
-summary(newmod)
-lsmeans(newmod, specs = c("fdate", "vis"))
+CtoD.mod <- glm(CtoD ~ vis * fdate, data=CtoD.m, family="binomial")
+anova(CtoD.mod, test="Chisq")  # vis * date interaction significant
+CtoD.mod <- stepAIC(CtoD.mod)
+lsmeans(CtoD.mod, specs = c("fdate", "vis"), contr="pairwise", p.adjust="mvt")
+# Analyze effect of date in bleached only
+CtoD.b <- CtoD.m[which(CtoD.m$vis=="bleached"), ]
+CtoD.b.mod <- glm(CtoD ~ fdate, data=CtoD.b, family="binomial")
+anova(CtoD.b.mod, test="Chisq")
+# Analyze effect of date in not bleached only
+CtoD.nb <- CtoD.m[which(CtoD.m$vis=="not bleached"), ]
+CtoD.nb.mod <- glm(CtoD ~ fdate, data=CtoD.nb, family="binomial")
+anova(CtoD.nb.mod, test="Chisq")
+lsmeans(CtoD.nb.mod, specs="fdate")
+
+ch <- chisq.test(CtoD.nb$CtoD, CtoD.nb$fdate)
+ch$observed
 
 DtoC.mod <- glm(DtoC ~ vis * reef * fdate, data=DtoC.m, family="binomial")
 anova(DtoC.mod, test="Chisq")
-lsmeans(DtoC.mod, specs="reef")
+DtoC.mod <- stepAIC(DtoC.mod, direction="backward")
+lsmeans(DtoC.mod, specs="reef", contr="pairwise")
 
-summary(CtoD.mod)
-anova(newmod, test="Chisq")
-dropterm(newmod, test="Chisq")
-plot(effect("vis:fdate", newmod))
+shuff.mod <- glm(shuff ~ vis * fdate, data=shuff.m, family="binomial")
+anova(shuff.mod, test="F")
+shuff.mod <- stepAIC(shuff.mod)
+summary(shuff.mod)
+dropterm(shuff.mod, test="Chisq")
+shuff.mod <- stepAIC(shuff.mod)
+anova(shuff.mod, test="Chisq")
+shuff.lsm <- lsmeans(shuff.mod, specs="reef", contr="pairwise")
+shuff.lsm
+# Compute probability of shuffling for each reef
+sapply(summary(shuff.lsm)$lsmeans$lsmean, function(x) exp(x)/(1+exp(x))) # from model
+
+shuff.s <- split(shuff.m, f=shuff.m$reef) # from data
+lapply(shuff.s, FUN=function(x) table(x$shuff))
+
 
 # • Figure 4: Symbiont community structure in each colony over time ----------------------------------------
 pdf("Figure4*.pdf", width=3.5, height=6)
@@ -335,7 +360,7 @@ for(day in 0:82) {
   mod.ref.grid <- ref.grid(mod.all, at=list(days=day))
   pvals.1t[day + 1, ] <- lsmeans::test(rbind(pairs(mod.ref.grid, by="reef")), adjust="mvt")$p.value
 }
-# Find which day/date pvalue is > 0.01 (no longer significantly different) at each reef
+# Find which day/date pvalue is > 0.05 (no longer significantly different) at each reef
 daystilrecov <- apply(pvals.1t, 2, function(x) match(F, x < 0.05)) - 1
 datestilrecov <- as.Date("2014-10-24", format="%F") + daystilrecov
 datestilrecov; daystilrecov
