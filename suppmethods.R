@@ -8,10 +8,12 @@ fn <- droplevels(fn[which(fn$Sample.Name!=""), ])
 plot(C_ ~ log10(Quantity), data=fn, pch=21, bg=fn$Target.Name, ylab="CT value")
 legend("topright", levels(fn$Target.Name), pch=21, pt.bg=factor(levels(fn$Target.Name)))
 
-# Sets clade D target as baseline contrast
+# Set clade D target as baseline contrast
 contrasts(fn$Target.Name) <- contr.treatment(levels(fn$Target.Name), base=2)
-
-mod <- lm(C_ ~ log10(Quantity) + Target.Name, data=fn)
+# Fit model with predictors quantity and target
+mod <- lm(C_ ~ log10(Quantity) * Target.Name, data=fn) 
+anova(mod)  # No interaction = slopes equal
+mod <- update(mod, ~ log10(Quantity) + Target.Name) # Remove interaction
 anova(mod)
 summary(mod)
 coef(mod)  # Fluorescence normalization values: 0 for clade D, 0.84815 for Mcap, and 2.26827 for clade C
@@ -66,4 +68,4 @@ svd <- svd(copies)
 wp <- matrix(c(1 / svd$d[1], 0, 0, 1/svd$d[2]), ncol=2)
 x <- svd$v %*% wp %*% t(svd$u) %*% cells
 copynumber <- 1 / x
-copynumber
+copynumber  # Values of 33 and 3 utilized for data analysis
