@@ -2,15 +2,12 @@
 # Author: Ross Cunning
 # Last updated: 26 October, 2015
 # =================================================================================================
-
 # Run setup script
 source("setup.R")
 # Set seed
 set.seed(39059978)
-
 # =================================================================================================
-
-# • Figure 1: Map of study reef locations in Kaneohe Bay and photograph of bleached/non-bleached corals -------
+# • Figure 1: Map of Kaneohe Bay and photograph of bleached/non-bleached colonies -------
 # Reef locations and colors
 reef44 <- c(21.4767770, -157.8336070)
 reef25 <- c(21.4611944, -157.8222500)
@@ -46,7 +43,6 @@ par(new=T, mar=c(9,12.8,0,0))
 plot(img2)
 box()
 dev.off()
-
 # • Analysis: Symbiodinium community structure --------------------------
 # Proportion of samples with C only, D only, and C+D mixtures
 symtab <- table(Mcap.f$syms)
@@ -70,7 +66,7 @@ clades
 # Proportion of colonies with overall C or D dominance (most abundant over time)
 propdom <- prop.table(table(Mcap.f[which(Mcap.f$fdate=="20141024"), "tdom"]))
 propdom
-# • Figure 2: Occurrence of Symbiodinium clades C and D in M. capitata samples and colonies  ---------------
+# • Figure 2: Symbiodinium clades C and D in M. capitata samples and colonies  ---------------
 pdf(file="output/Figure2.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
@@ -112,8 +108,7 @@ brackets(x1=par("usr")[2], y1=par("usr")[4], x2=par("usr")[2], y2=propdom["C"],
 text(x=rep(par("usr")[2] + 0.5, 2), y=c(0.4, 0.9), labels = c("C dominant", "D dominant"), 
      xpd=T, pos=1, srt=90, cex=0.75)
 dev.off()
-
-# • Analysis: Influence of Symbiodinium on bleaching response -------------------------------
+# • Analysis: Influence of Symbiodinium on bleaching -------------------------------
 # Test for differences in dominant clade between bleached and unbleached colonies
 Mcap.f.summ <- unique(Mcap.f[, c("colony", "vis", "reef", "tdom")])
 vis.chi <- chisq.test(Mcap.f.summ$vis, Mcap.f.summ$tdom)
@@ -123,9 +118,10 @@ sh.mod <- lm(log(tot.SH) ~ tdom:vis * reef, data=subset(Mcap.ff, fdate=="2014102
 anova(sh.mod)  # No effect of reef, remove reef from model
 sh.mod <- update(sh.mod, ~ tdom:vis)
 sh.lsm <- lsmeans(sh.mod, specs=c("tdom", "vis"))[c(1,3,4)] 
-cld(sh.lsm)
-bvnb <- summary(lsmeans(update(sh.mod, ~ vis), specs="vis")) # compare bleached vs. not-bleached
-exp(bvnb$lsmean)  # S/H in bleached vs. non-bleached corals
+contrast(sh.lsm, method="pairwise")
+bvnb <- lsmeans(update(sh.mod, ~ vis), specs="vis", contr="pairwise") # compare bleached vs. not-bleached
+bvnb
+exp(summary(bvnb)$lsmeans$lsmean)  # S/H in bleached vs. non-bleached corals
 # Compare presence of D in C-dominated colonies that bleached vs. did not bleach
 Ccol <- subset(Mcap.f, tdom=="C")
 model <- glmer(!is.na(D.SH) ~ vis + (1|colony), family="binomial", data=Ccol)
@@ -138,7 +134,7 @@ anova(bleach, test="F")
 with(Mcap.f.summ[which(Mcap.f.summ$vis=="not bleached"), ], {
   chisq.test(reef, tdom)[c("observed", "p.value")]
 })  # No difference
-# • Figure 3: Influence of Symbiodinium on bleaching in M. capitata -------------------------------
+# • Figure 3: Influence of Symbiodinium on bleaching -------------------------------
 pdf("output/Figure3.pdf", height=3.18898, width=3.18898)  # 81 mm square
 par(mfrow=c(1,2), mar=c(2,2,1,1), mgp=c(1.75,0.5,0))
 # Plot barplot of C and D dominance in bleached and healthy corals
@@ -166,8 +162,7 @@ text(c(1,2,3), par("usr")[3], xpd=T, pos=1, cex=0.75,
      labels=c("B\n(C)", "NB\n(C)", "NB\n(D)"))
 text(x=-0.125, y=par("usr")[4], labels="B", xpd=T, pos=2)
 dev.off()
-
-# • Analysis: Temporal paterns in Symbiodinium composition -------------------------------
+# • Analysis: Temporal patterns in Symbiodinium composition -------------------------------
 # Determine occurrence of dominant symbiont stability vs. shuffling (at any point in time)
 doms <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef", "tdom"), measure.vars="dom",
              factorsAsStrings=FALSE)
@@ -198,7 +193,7 @@ dropterm(bgD, test="Chisq") # vis and fdate are not significant
 Dcol <- subset(Mcap.f, tdom=="D")
 bgC <- glmer(is.na(C.SH) ~ fdate + (1|colony), data=Dcol, family="binomial")
 dropterm(bgC, test="Chisq")  # fdate not significant
-# • Figure 4: Symbiont community structure in each colony over time ----------------------------------------
+# • Figure 4: Symbiont community structure in individual colonies over time ----------------------------------------
 # Create matrix for image function
 clades <- melt(Mcap.f, id.vars=c("colony", "date", "vis", "reef", "tdom"), measure.vars="syms",
                factorsAsStrings=FALSE)
@@ -272,13 +267,12 @@ text(xpd=T, y=quantile(par("usr")[3:4], 0) * -1.05 - 2.5, pos=1, cex=0.9,
      x=quantile(par("usr")[1:2], 0.5),
      labels=expression(italic(Symbiodinium)~clades))
 dev.off()
-
 # • Analysis: Temporal patterns in Symbiodinium abundance ------------------------------------
 # Mean S/H in bleached corals in October
 exp(mean(log(Mcap.ff.oct.b$tot.SH)))  
 anova(bleach, test="F")  # Comparison among reefs (see above)
 # Mean S/H in non-bleached corals in October
-exp(bvnb$lsmean[2])
+exp(summary(bvnb)$lsmeans$lsmean)[2]
 # Test effects of reef, bleaching, and symbiont clade on S/H in January
 Mcap.ff.jan <- subset(Mcap.ff, fdate=="20150114")
 janmod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.jan)
@@ -343,7 +337,7 @@ datestilrecov <- as.Date("2014-10-24", format="%F") + daystilrecov
 datestilrecov; daystilrecov
 
 #
-# • Figure 5: Recovery dynamics --------------------------------------------------
+# • Figure 5: Symbiodinium population trajectories --------------------------------------------------
 # Plotting function
 plotreefs <- function(mod, pred) {
   dat <- model.frame(mod)
@@ -415,4 +409,3 @@ for (reef in c("44", "25", "HIMB")) {
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
-
