@@ -9,6 +9,42 @@ source("setup.R")
 set.seed(39059978)
 
 # =================================================================================================
+# • Figure 1: Map of study reef locations in Kaneohe Bay and photograph of bleached/non-bleached corals -------
+# Reef locations and colors
+reef44 <- c(21.4767770, -157.8336070)
+reef25 <- c(21.4611944, -157.8222500)
+HIMB   <- c(21.4350000, -157.7910833)
+reefcoords <- rbind(reef44, reef25, HIMB)
+reefcols <- c("#8dd3c7", "#bebada", "#d9d9d9")
+
+# rgdal map
+library(rgdal)
+HI <- readOGR("coast_n83.shp", "coast_n83")  # units are in meters
+HI <- spTransform(HI, CRS("+proj=longlat +datum=NAD83"))  # transform to lat/long
+
+# Import bleached pair photograph for figure
+library(png) # in order to read compressed png files
+img <- readPNG("bleachedpair.png") 
+library(pixmap) # In order to plot img2
+img2 <- pixmapRGB(img)
+plot(img2)
+
+# Figure 1: Map of study locations
+pdf("Figure1*.pdf", height=3, width=4)
+par(mar=c(0,0,0,0))
+plot(HI, xlim=c(-157.856807, -157.754123), ylim=c(21.403735, 21.525718), 
+     lwd=2, col="gray")  #Kbay
+box()
+points(reefcoords[,c(2,1)], pch=21, cex=1.5, col="black", bg=reefcols)
+text(reefcoords[,c(2,1)], labels=c("Reef 44", "Reef 25", "HIMB"), pos=4)
+par(new=T, mar=c(0,0,9,12.8))
+plot(HI, xlim=c(-158.3, -157.6), ylim=c(21.35, 21.6), lwd=0.4, col="gray", bg="white")  # Oahu
+rect(-157.9, 21.39, -157.7, 21.53)
+box()
+par(new=T, mar=c(9,12.8,0,0))
+plot(img2)
+box()
+dev.off()
 
 # • Analysis: Symbiodinium community structure --------------------------
 # Proportion of samples with C only, D only, and C+D mixtures
