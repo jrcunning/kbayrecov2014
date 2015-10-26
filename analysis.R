@@ -1,15 +1,15 @@
-# Title: Dynamics and recovery of Montipora capitata symbioses following bleaching in Kaneohe Bay
+# Title: Patterns of bleaching and recovery of Montipora capitata in Kaneohe Bay
 # Author: Ross Cunning
-# Last updated: 27 August, 2015
-#
+# Last updated: 26 October, 2015
+# =================================================================================================
+
 # Run setup script
 source("setup.R")
 # Set seed
 set.seed(39059978)
 
 # =================================================================================================
-# SYMBIONT COMMUNITY STRUCTURE AND BLEACHING
-# =================================================================================================
+
 # • Analysis: Symbiodinium community structure --------------------------
 # Proportion of samples with C only, D only, and C+D mixtures
 symtab <- table(Mcap.f$syms)
@@ -81,8 +81,10 @@ dev.off()
 Mcap.f.summ <- unique(Mcap.f[, c("colony", "vis", "reef", "tdom")])
 vis.chi <- chisq.test(Mcap.f.summ$vis, Mcap.f.summ$tdom)
 vis.chi[c("p.value", "observed")]
-# Test for differences in S/H between C-bleached, C-notbleached, and D-notbleached
-sh.mod <- lm(log(tot.SH) ~ tdom:vis, data=Mcap.ff.oct)
+# Test for differences in October S/H between C-bleached, C-notbleached, and D-notbleached and reefs
+sh.mod <- lm(log(tot.SH) ~ tdom:vis * reef, data=subset(Mcap.ff, fdate=="20141024"))
+anova(sh.mod)  # No effect of reef, remove reef from model
+sh.mod <- update(sh.mod, ~ tdom:vis)
 sh.lsm <- lsmeans(sh.mod, specs=c("tdom", "vis"))[c(1,3,4)] 
 cld(sh.lsm)
 bvnb <- summary(lsmeans(update(sh.mod, ~ vis), specs="vis")) # compare bleached vs. not-bleached
@@ -90,7 +92,7 @@ exp(bvnb$lsmean)  # S/H in bleached vs. non-bleached corals
 # Compare presence of D in C-dominated colonies that bleached vs. did not bleach
 Ccol <- subset(Mcap.f, tdom=="C")
 model <- glmer(!is.na(D.SH) ~ vis + (1|colony), family="binomial", data=Ccol)
-lsmeans(model, specs = "vis", contr="pairwise")
+dropterm(model, test="Chisq")
 # Test for differences in S/H among reefs in bleached corals
 Mcap.ff.oct.b <- subset(Mcap.ff, fdate=="20141024" & vis=="bleached")
 bleach <- lm(log(tot.SH) ~ reef, data=Mcap.ff.oct.b)
@@ -234,12 +236,28 @@ text(xpd=T, y=quantile(par("usr")[3:4], 0) * -1.05 - 2.5, pos=1, cex=0.9,
      labels=expression(italic(Symbiodinium)~clades))
 dev.off()
 
+# • Analysis: Temporal patterns in Symbiodinium abundance ------------------------------------
+# Mean S/H in bleached corals in October
+exp(mean(log(Mcap.ff.oct.b$tot.SH)))  
+anova(bleach, test="F")  # Comparison among reefs (see above)
+# Mean S/H in non-bleached corals in October
+exp(bvnb$lsmean[2])
+# Test effects of reef, bleaching, and symbiont clade on S/H in January
+Mcap.ff.jan <- subset(Mcap.ff, fdate=="20150114")
+janmod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.jan)
+anova(janmod)  # No significant effects
+janmean <- exp(mean(log(Mcap.ff.jan$tot.SH)))  
+janmean # Grand geommean of january - no diff by reef or vis
+# Test effects of reef, bleaching, and symbiont clade on S/H in May
+Mcap.ff.may <- subset(Mcap.ff, fdate=="20150506")
+maymod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.may)
+anova(maymod)
+maymod <- lm(log(tot.SH) ~ reef + vis, data=Mcap.ff.may)
+anova(maymod)
+lsmeans(maymod, spec="reef", contr="pairwise")
+lsmeans(maymod, spec="vis", contr="pairwise")
 
-
-# =================================================================================================
-# RECOVERY
-# =================================================================================================
-# • Analysis: Recovery dynamics --------------------------------------------------
+# Model trajectories of symbiont populations over time using mixed model
 #   Build piecewise polynomial model with knot at 82 days (January time point)
 #   From October to January, fit a quadratic polynomial (1st element of degree=2)
 #   From January to May, fit a linear model (2nd element of degree=1)
@@ -274,8 +292,8 @@ pred.all$lci <- apply(bootfit$t, 2, quantile, 0.05)
 pred.all$uci <- apply(bootfit$t, 2, quantile, 0.95)
 
 # Calculate when bleached are no longer different from healthy at each reef
-# Test null hypotheses that S/H in bleached corals < non-bleached corals at each reef
-#    on each day from 0 through 82, with p-value adjustments (method mvt) based on the 
+# Test null hypothesis that S/H in bleached corals = non-bleached corals at each reef
+#    on each day from 24 Oct to 14 Jan, with p-value adjustments (method mvt) based on the 
 #    number of tests on each day (3).
 pvals <- matrix(0, nrow=83, ncol=3, dimnames=list(days=as.character(0:82), reef=levels(Mcap$reef)))
 for(day in 0:82) {
@@ -361,34 +379,6 @@ segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y,
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
 
-# • Analysis: single time point statistics ----------------------
-# January (recovered)
-Mcap.ff.jan <- subset(Mcap.ff, fdate=="20150114")
-janmod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.jan)
-anova(janmod)
-janmean <- mean(log(Mcap.ff.jan$tot.SH))  # Grand geommean of january - no diff by reef or vis
-exp(janmean)
-# Comparisons
-exp(octmeans[1])/exp(octmeans[2])  # Bleached are 88% lower than non-bleached in oct
-exp(octmeans) / exp(janmean)  # Rel to jan, oct vals 95% lower in bleached, 61% lower in not-bleached
-# May (post-recov)
-Mcap.ff.may <- Mcap.ff[!out, ][which(Mcap.ff[!out, ]$fdate=="20150506"), ]
-maymod <- lm(log(tot.SH) ~ reef * vis * tdom, data=Mcap.ff.may)
-anova(maymod)
-maymod <- lm(log(tot.SH) ~ vis, data=Mcap.ff.may)
-anova(maymod)
-data.frame(effect("vis", maymod))
-exp(data.frame(effect("vis", maymod))$fit)
-maymean <- mean(log(Mcap.ff.may$tot.SH))  # Grand geommean of january
-exp(maymean)
-
-
-# Nonbleached by date
-mod <- lmer(log(tot.SH) ~ fdate + (1|colony), data=Mcap.ff[which(Mcap.ff$vis=="not bleached"), ])
-anova(mod)
-mod.ref.grid <- ref.grid(mod, at=list(fdate=c("20141024", "20150114", "20150506")))
-contrast(mod.ref.grid, specs="fdate", method="pairwise")
-lsmeans(mod.ref.grid, specs="fdate")
 
 # =================================================================================================
 # • Temperature data ---------------------------------------------------------------
