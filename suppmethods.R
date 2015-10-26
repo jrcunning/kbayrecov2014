@@ -1,6 +1,6 @@
 
 # Fluorescence normalization --------------------
-file <- "data/20150907_KBayRecov_Mcap_fluornorm_data.csv"
+file <- "data/supp/20150907_KBayRecov_Mcap_fluornorm_data.csv"
 fn <- read.csv(file, skip=6, na.strings="Undetermined")[, c(1:3, 7, 10)]
 fn <- droplevels(fn[which(fn$Sample.Name!=""), ])
 
@@ -31,8 +31,8 @@ with(newdat[which(newdat$Target.Name=="C"), ], lines(log10(Quantity), fit, col="
 # Import data
 library(reshape2)
 source("~/Documents/Academia/HIMB/steponeR/steponeR.R")
-files <- list("data/20150911_KBayRecov_Mcap_copyno_1_data.csv", 
-              "data/20150911_KBayRecov_Mcap_copyno_2_data.csv")
+files <- list("data/supp/20150911_KBayRecov_Mcap_copyno_1_data.csv", 
+              "data/supp/20150911_KBayRecov_Mcap_copyno_2_data.csv")
 cn <- steponeR(files)  # Imports data, calculates copies in unknowns based on standards for each plate
 
 # Plot standards
@@ -51,9 +51,10 @@ cndat <- data.frame(colsplit(cndat$Sample.Name, "-", names=c("colony", "extract.
 # Plate 1 had 1 µL template loaded, plate 2 had 2 µL template loaded
 cndat$template.µL <- ifelse(cndat$Filename=="20150911_KBayRecov_Mcap_copyno_1_data.csv", 1, 2)
 
-# Import cell count data
-cells <- read.csv("data/cells.csv")
-cells$cells.µL <- cells$extract.cells * 0.955 / 50  # Calculate cells per µL given 95.5% extraction efficiency and 50 µL elution volume
+# Cell count data: number of cells from which DNA was extracted for each sample
+cells <- data.frame(colony=c(52,72,58,80,57,69),
+                    extract.cells=c(100000,100000,83295,71595,94545,100000))
+cells$cells.µL <- cells$extract.cells * 0.955 / 50  # Calculate cells per µL in extracted DNA given 95.5% extraction efficiency and 50 µL elution volume
 
 # Merge copies and cells data, calculate expected cells per reaction
 cndat <- merge(cndat, cells[, c("colony", "cells.µL")], by="colony")
