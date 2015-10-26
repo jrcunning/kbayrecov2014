@@ -9,6 +9,7 @@ source("setup.R")
 set.seed(39059978)
 
 # =================================================================================================
+
 # • Figure 1: Map of study reef locations in Kaneohe Bay and photograph of bleached/non-bleached corals -------
 # Reef locations and colors
 reef44 <- c(21.4767770, -157.8336070)
@@ -19,18 +20,18 @@ reefcols <- c("#8dd3c7", "#bebada", "#d9d9d9")
 
 # rgdal map
 library(rgdal)
-HI <- readOGR("coast_n83.shp", "coast_n83")  # units are in meters
+HI <- readOGR("data/coast_n83.shp", "coast_n83")  # units are in meters
 HI <- spTransform(HI, CRS("+proj=longlat +datum=NAD83"))  # transform to lat/long
 
 # Import bleached pair photograph for figure
 library(png) # in order to read compressed png files
-img <- readPNG("bleachedpair.png") 
+img <- readPNG("data/bleachedpair.png") 
 library(pixmap) # In order to plot img2
 img2 <- pixmapRGB(img)
 plot(img2)
 
 # Figure 1: Map of study locations
-pdf("Figure1*.pdf", height=3, width=4)
+pdf("output/Figure1.pdf", height=3, width=4)
 par(mar=c(0,0,0,0))
 plot(HI, xlim=c(-157.856807, -157.754123), ylim=c(21.403735, 21.525718), 
      lwd=2, col="gray")  #Kbay
@@ -70,7 +71,7 @@ clades
 propdom <- prop.table(table(Mcap.f[which(Mcap.f$fdate=="20141024"), "tdom"]))
 propdom
 # • Figure 2: Occurrence of Symbiodinium clades C and D in M. capitata samples and colonies  ---------------
-pdf(file="Figure2*.pdf", height=3, width=3)
+pdf(file="output/Figure2.pdf", height=3, width=3)
 # Plot histogram of proportion clade D in mixed C+D samples
 par(mfrow=c(1,2), mar=c(10,1.5,1,2), mgp=c(1,0.25,0), tcl=-0.25)
 hist(propD, plot=T, main="", xaxt="n", xlab="", yaxt="n", ylab="", col = "gray60")
@@ -138,7 +139,7 @@ with(Mcap.f.summ[which(Mcap.f.summ$vis=="not bleached"), ], {
   chisq.test(reef, tdom)[c("observed", "p.value")]
 })  # No difference
 # • Figure 3: Influence of Symbiodinium on bleaching in M. capitata -------------------------------
-pdf("Figure3*.pdf", height=3.18898, width=3.18898)  # 81 mm square
+pdf("output/Figure3.pdf", height=3.18898, width=3.18898)  # 81 mm square
 par(mfrow=c(1,2), mar=c(2,2,1,1), mgp=c(1.75,0.5,0))
 # Plot barplot of C and D dominance in bleached and healthy corals
 bars <- barplot(t(as.matrix(vis.chi$observed / rowSums(vis.chi$observed))), beside=F, xaxt="n", yaxt="n", yaxs="i",
@@ -210,7 +211,7 @@ clades.m0 <- clades[with(clades, order(rev(vis), tdom, clades[, 5], clades[, 6],
 clades.m <- as.matrix(clades.m0[,5:10])
 rownames(clades.m) <- as.character(clades.m0$colony)
 # Plot figure
-pdf("Figure4*.pdf", width=3.5, height=6)
+pdf("output/Figure4.pdf", width=3.5, height=6)
 par(mfrow=c(1,1), mar=c(3,5,2,2), bg="white")
 image(x=seq(1, ncol(clades.m)), y=seq(1, nrow(clades.m)), z=t(clades.m), 
       xaxt="n", yaxt="n", xlab="", ylab="",
@@ -314,7 +315,7 @@ Mcap.ff[out, ]  # outlying data points
 mod.all <- lmerTest::lmer(log(tot.SH) ~ sp(days) * vis * reef + (1 | colony), data=Mcap.ff[!out, ])
 # Print and save ANOVA table for model
 anovatab <- anova(mod.all)
-write.csv(round(anovatab, digits=3), file="anova_table.csv")
+write.csv(round(anovatab, digits=3), file="output/Table1.csv")
 # pseudo-r2 value-- squared correlation between fitted and observed values
 summary(lm(model.response(model.frame(mod.all)) ~ fitted(mod.all)))$r.squared
 
@@ -388,7 +389,7 @@ plotreefs <- function(mod, pred) {
   return(list(predlist=predlist, datlist=datlist))
 }
 # Plot
-pdf("Figure5*.pdf", width=3.5, height=7)
+pdf("output/Figure5.pdf", width=3.5, height=7)
 reefcols <- list(`25`="#bebada", `44`="#8dd3c7", HIMB="#d9d9d9")
 vislty <- list("bleached"=2, "not bleached"=1)
 vispch <- list("bleached"=24, "not bleached"=21)
@@ -415,53 +416,3 @@ segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y,
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
 
-
-# =================================================================================================
-# • Temperature data ---------------------------------------------------------------
-# Import temperature data
-setwd("~/Documents/Academia/HIMB/K-Bay recovery 2014/Temp data/")
-rf25.temp <- read.csv("Rf25_temps.csv")
-rf44.temp <- read.csv("Rf44_temps.csv")
-HIMB.temp <- read.csv("HIMB_temps.csv")
-# Set date and time to POSIXct
-rf25.temp$datetime <- paste(rf25.temp$date, rf25.temp$time)
-rf25.temp$time <- as.POSIXct(rf25.temp$datetime, format="%m/%e/%y %H:%M:%S")
-rf25.temp <- rf25.temp[, c(2,3,4)]
-rf44.temp$datetime <- paste(rf44.temp$date, rf44.temp$time)
-rf44.temp$time <- as.POSIXct(rf44.temp$datetime, format="%m/%e/%y %H:%M:%S")
-rf44.temp <- rf44.temp[, c(2,3,4)]
-HIMB.temp$datetime <- paste(HIMB.temp$date, HIMB.temp$time)
-HIMB.temp$time <- as.POSIXct(HIMB.temp$datetime, format="%m/%e/%y %H:%M:%S")
-HIMB.temp <- HIMB.temp[, c(2,3,4)]
-# Subset data only up until threshdate
-threshdate <- as.POSIXct("2015-09-01", format="%F")
-rf25.temp <- rf25.temp[which(rf25.temp$time < threshdate), ]
-rf44.temp <- rf44.temp[which(rf44.temp$time < threshdate), ]
-HIMB.temp <- HIMB.temp[which(HIMB.temp$time < threshdate), ]
-
-# Aggregate temperature data by daily mean, minimum, and maximum
-rf25 <- aggregate(data.frame(mean=rf25.temp$temp_cal), by=list(date=as.Date(rf25.temp$time)), FUN=mean)
-rf25$min <- aggregate(rf25.temp$temp_cal, by=list(as.Date(rf25.temp$time)), FUN=min)$x
-rf25$max <- aggregate(rf25.temp$temp_cal, by=list(as.Date(rf25.temp$time)), FUN=max)$x
-rf44 <- aggregate(data.frame(mean=rf44.temp$temp_cal), by=list(date=as.Date(rf44.temp$time)), FUN=mean)
-rf44$min <- aggregate(rf44.temp$temp_cal, by=list(as.Date(rf44.temp$time)), FUN=min)$x
-rf44$max <- aggregate(rf44.temp$temp_cal, by=list(as.Date(rf44.temp$time)), FUN=max)$x
-HIMB <- aggregate(data.frame(mean=HIMB.temp$temp_cal), by=list(date=as.Date(HIMB.temp$time)), FUN=mean)
-HIMB$min <- aggregate(HIMB.temp$temp_cal, by=list(as.Date(HIMB.temp$time)), FUN=min)$x
-HIMB$max <- aggregate(HIMB.temp$temp_cal, by=list(as.Date(HIMB.temp$time)), FUN=max)$x
-
-# Plot daily mean, min, and max for each reef
-plot(mean ~ date, rf44, type="l", col="darkgreen", ylim=c(21.5,30))
-polygon(x=c(rf44$date, rev(rf44$date)), y=c(rf44$min, rev(rf44$max)),
-        border=NA, col=alpha("darkgreen", 0.2))
-lines(mean ~ date, HIMB, type="l", col="red")
-polygon(x=c(HIMB$date, rev(HIMB$date)), y=c(HIMB$min, rev(HIMB$max)),
-        border=NA, col=alpha("red", 0.2))
-rf25.split <- split(rf25, f=rf25$date < as.Date("2014-11-21", format="%F"))
-lines(mean ~ date, rf25.split[[1]], type="l", col="blue")
-polygon(x=c(rf25.split[[1]]$date, rev(rf25.split[[1]]$date)), y=c(rf25.split[[1]]$min, rev(rf25.split[[1]]$max)),
-        border=NA, col=alpha("blue", 0.2))
-lines(mean ~ date, rf25.split[[2]], type="l", col="blue")
-polygon(x=c(rf25.split[[2]]$date, rev(rf25.split[[2]]$date)), y=c(rf25.split[[2]]$min, rev(rf25.split[[2]]$max)),
-        border=NA, col=alpha("blue", 0.2))
-legend("bottomright", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
