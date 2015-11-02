@@ -70,3 +70,128 @@ wp <- matrix(c(1 / svd$d[1], 0, 0, 1/svd$d[2]), ncol=2)
 x <- svd$v %*% wp %*% t(svd$u) %*% cells
 copynumber <- 1 / x
 copynumber  # Values of 33 and 3 utilized for data analysis
+
+
+##### ITS2 ANALYSIS ----------------
+
+library(phyloseq)
+
+# Import data as phyloseq object
+OTU97 <- otu_table(read.table("data/ITS2/OTUs_97/otu_table_97.tsv", header=T, check.names=F, 
+                              row.names=1, skip=1, comment.char="", sep="\t"), taxa_are_rows=T)
+OTU100 <- otu_table(read.table("data/ITS2/OTUs_100/otu_table_100.tsv", header=T, check.names=F, 
+                               row.names=1, skip=1, comment.char="", sep="\t"), taxa_are_rows=T)
+TAX97 <- read.table("data/ITS2/OTUs_97/blast_taxonomy_97/rep_set_97_tax_assignments.txt", 
+                    sep="\t", row.names=1, col.names=c("OTU.ID", "Taxonomy", "Eval", "Subtype"))
+TAX97$otuname <- rownames(TAX97)
+TAX97 <- tax_table(as.matrix(TAX97))
+TAX100 <- read.table("data/ITS2/OTUs_100/blast_taxonomy_100/rep_set_100_tax_assignments.txt", sep="\t", row.names=1,
+                     col.names=c("OTU.ID", "Taxonomy", "Eval", "Subtype"))
+TAX100$otuname <- rownames(TAX100)
+TAX100 <- tax_table(as.matrix(TAX100))
+SAM <- sample_data(read.csv("data/ITS2/sample_data.csv", row.names=1))
+phy97 <- phyloseq(OTU97, TAX97, SAM)
+phy100 <- phyloseq(OTU100, TAX100, SAM)
+phy97; phy100
+
+# Remove taxa not seen at least 3 times in at least one sample
+phy97.f <- filter_taxa(phy97, function(x) sum(x >= 3) > 1, prune=T)
+phy100.f <- filter_taxa(phy100, function(x) sum(x >= 3) > 1, prune=T)
+phy97.f; phy100.f
+# Transform sample counts to relative abundance
+phy97.f.p <- transform_sample_counts(phy97.f, function(x) x/sum(x))
+phy100.f.p <- transform_sample_counts(phy100.f, function(x) x/sum(x))
+# Barplots
+plot_bar(phy97.f.p, fill="Subtype", facet_grid=~vis)
+plot_bar(phy100.f.p, fill="otuname", facet_grid=~vis)
+
+# Most abundant OTUs
+head(otu_table(phy97.f.p)[order(rowSums(otu_table(phy97.f.p)), decreasing=T)])
+tax_table(phy97.f.p)[rownames(head(otu_table(phy97.f.p)[order(rowSums(otu_table(phy97.f.p)), decreasing=T)]))]
+head(otu_table(phy100.f.p)[order(rowSums(otu_table(phy100.f.p)), decreasing=T)])
+tax_table(phy100.f.p)[rownames(head(otu_table(phy100.f.p)[order(rowSums(otu_table(phy100.f.p)), decreasing=T)]))]
+
+# Compare bleached to non-bleached using PERMANOVA
+library(vegan)
+perm.97.vis <- adonis(phyloseq::distance(phy97.f.p, "bray") ~ vis, 
+                      data=as(sample_data(phy97.f.p), "data.frame"), permutations=999)
+perm.97.clade <- adonis(phyloseq::distance(phy97.f.p, "bray") ~ sym, 
+                        data=as(sample_data(phy97.f.p), "data.frame"), permutations=999)
+phy97.f.p.C <- subset_samples(phy97.f.p, sym=="C")
+perm.97.visC <- adonis(phyloseq::distance(phy97.f.p.C, "bray") ~ vis, 
+                       data=as(sample_data(phy97.f.p.C), "data.frame"), permutations=999)
+perm.100.vis <- adonis(phyloseq::distance(phy100.f.p, "bray") ~ vis, 
+                      data=as(sample_data(phy100.f.p), "data.frame"), permutations=999)
+perm.100.clade <- adonis(phyloseq::distance(phy100.f.p, "bray") ~ sym, 
+                        data=as(sample_data(phy100.f.p), "data.frame"), permutations=999)
+phy100.f.p.C <- subset_samples(phy100.f.p, sym=="C")
+perm.100.visC <- adonis(phyloseq::distance(phy100.f.p.C, "bray") ~ vis, 
+                       data=as(sample_data(phy100.f.p.C), "data.frame"), permutations=999)
+
+phy97.f.p.NB <- subset_samples(phy97.f.p, vis=="not bleached")
+perm.97.cladeNB <- adonis(phyloseq::distance(phy97.f.p.NB, "bray") ~ sym, 
+                      data=as(sample_data(phy97.f.p.NB), "data.frame"), permutations=999)
+phy100.f.p.NB <- subset_samples(phy100.f.p, vis=="not bleached")
+perm.100.cladeNB <- adonis(phyloseq::distance(phy100.f.p.NB, "bray") ~ sym, 
+                          data=as(sample_data(phy100.f.p.NB), "data.frame"), permutations=999)
+
+# Better Barplots
+sample_data(phy97.f.p)$sample <- factor(rownames(sample_data(phy97.f.p)),
+                                        levels=c("6K","20K","58K","66K","110K","128K","3K","11K","127K"))
+sample_data(phy100.f.p)$sample <- factor(rownames(sample_data(phy100.f.p)),
+                                        levels=c("6K","20K","58K","66K","110K","128K","3K","11K","127K"))
+plot_bar(phy97.f.p, x="sample", y="Abundance", fill="Subtype")
+plot_bar(phy100.f.p, x="sample", y="Abundance", fill="Subtype")
+
+
+# 97%-OTUs barplot
+samdat <- data.frame(sample_data(phy97.f.p))
+samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
+typerelabund <- as.matrix(otu_table(phy97.f.p)[order(data.frame(tax_table(phy97.f.p))$Subtype), rownames(samdat)])
+typerelabund
+# Get info for plotting OTU names and blast hits on top of barplot
+blasthits <- as.character(data.frame(tax_table(phy97.f.p))[order(data.frame(tax_table(phy97.f.p))$Subtype), "Subtype"])
+names <- as.character(data.frame(tax_table(phy97.f.p))[order(data.frame(tax_table(phy97.f.p))$Subtype), "otuname"])
+divides <- apply(typerelabund, 2, cumsum)
+heights <- diff(divides)
+heights[heights < 0.02] <- NA
+bars <- barplot(typerelabund, col=rainbow(10), lwd=0.1,
+                xlab="Sample", ylab="Relative Abundance")
+for (i in 1:length(bars)) {
+  text(rep(bars[i], length(heights[which(!is.na(heights[,i])),i])), 
+       divides[which(!is.na(heights[,i])),i] + heights[which(!is.na(heights[,i])),i] / 2, 
+       labels=paste(names[which(!is.na(heights[,i]))+1], blasthits[which(!is.na(heights[,i]))+1],sep="\n"),
+       cex=0.5)
+}
+text(bars, rep(par("usr")[4], length(bars)),
+     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3)
+text(bars, rep(par("usr")[4]+0.075, length(bars)),
+     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3)
+
+
+
+# 100%-OTUs barplot
+samdat <- data.frame(sample_data(phy100.f.p))
+samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
+typerelabund <- as.matrix(otu_table(phy100.f.p)[order(data.frame(tax_table(phy100.f.p))$Subtype), rownames(samdat)])
+
+# Get info for plotting OTU names and blast hits on top of barplot
+blasthits <- as.character(data.frame(tax_table(phy100.f.p))[order(data.frame(tax_table(phy100.f.p))$Subtype), "Subtype"])
+names <- as.character(data.frame(tax_table(phy100.f.p))[order(data.frame(tax_table(phy100.f.p))$Subtype), "otuname"])
+divides <- apply(typerelabund, 2, cumsum)
+heights <- diff(divides)
+heights[heights < 0.02] <- NA
+
+# Plot barplot and OTU names and blast hits
+bars <- barplot(typerelabund, col=rainbow(941), border=NA,
+                xlab="Sample", ylab="Relative Abundance")
+for (i in 1:length(bars)) {
+  text(rep(bars[i], length(heights[which(!is.na(heights[,i])),i])), 
+       divides[which(!is.na(heights[,i])),i] + heights[which(!is.na(heights[,i])),i] / 2, 
+       labels=paste(names[which(!is.na(heights[,i]))+1],blasthits[which(!is.na(heights[,i]))+1],sep="\n"),
+       cex=0.5)
+}
+text(bars, rep(par("usr")[4], length(bars)),
+     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3)
+text(bars, rep(par("usr")[4]+0.075, length(bars)),
+     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3)
