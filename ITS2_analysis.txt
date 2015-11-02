@@ -1,0 +1,69 @@
+cd ~/Documents/Academia/HIMB/KBay_recovery_2014/kbayrecov/
+
+mkdir data/ITS2/mergeout
+iu-gen-configs data/ITS2/fastq_list.txt -o data/ITS2/mergeout
+
+
+# Merge sequences
+for i in ls data/ITS2/mergeout/*.ini
+do
+iu-merge-pairs  $i  --min-overlap-size 150 --enforce-Q30-check --marker-gene-stringent
+done
+
+
+# Filter sequences - keep only those with 3 mismatches or less
+for i in data/ITS2/mergeout/*_MERGED
+do
+iu-filter-merged-reads $i --max-mismatches 3
+done
+
+
+# Count sequences
+for i in data/ITS2/mergeout/*_MERGED-MAX-MISMATCH-3
+do
+echo $i
+grep '>' -c $i
+done
+
+# Add QIIME labels
+add_qiime_labels.py -m data/ITS2/mapping_file.txt -i data/ITS2/mergeout/ -c InputFileName -o data/ITS2
+
+# Chimera checking
+identify_chimeric_seqs.py -i data/ITS2/combined_seqs.fna --suppress_usearch61_ref -m usearch61 -o data/ITS2/usearch61_chimeras
+filter_fasta.py -f data/ITS2/combined_seqs.fna -o data/ITS2/seqs_chimera_filtered.fasta -s data/ITS2/usearch61_chimeras/chimeras.txt -n
+
+# OTU clustering at 97% similarity
+pick_otus.py -i data/ITS2/seqs_chimera_filtered.fasta -s 0.97 -o data/ITS2/OTUs_97
+
+# Pick representative sequence set
+pick_rep_set.py -i data/ITS2/OTUs_97/seqs_chimera_filtered_otus.txt -m most_abundant -f data/ITS2/seqs_chimera_filtered.fasta -o data/ITS2/OTUs_97/rep_set_97.fasta
+count_seqs.py -i data/ITS2/OTUs_97/rep_set_97.fasta
+
+# Assign taxonomy by blast
+assign_taxonomy.py -i data/ITS2/OTUs_97/rep_set_97.fasta -r data/ITS2/Unaligned_ITS2_Database_23April13.fasta -t data/ITS2/id_to_taxonomy_subtype_mod.txt -m blast -o data/ITS2/OTUs_97/blast_taxonomy_97
+
+# Make list of "no blast hits"
+awk '/No blast hit/' data/ITS2/OTUs_97/blast_taxonomy_97/rep_set_97_tax_assignments.txt > data/ITS2/OTUs_97/blast_taxonomy_97/no_hits_97.txt
+ 
+# Make OTU table excluding no blast hits
+make_otu_table.py -i data/ITS2/OTUs_97/seqs_chimera_filtered_otus.txt -t data/ITS2/OTUs_97/blast_taxonomy_97/rep_set_97_tax_assignments.txt -e data/ITS2/OTUs_97/blast_taxonomy_97/no_hits_97.txt -o data/ITS2/OTUs_97/otu_table_97.biom
+
+biom convert -i data/ITS2/OTUs_97/otu_table_97.biom -o data/ITS2/OTUs_97/otu_table_97.tsv --to-tsv
+
+# OTU clustering at 100% similarity
+pick_otus.py -i data/ITS2/seqs_chimera_filtered.fasta -s 1.00 -o data/ITS2/OTUs_100
+
+# Pick representative sequence set
+pick_rep_set.py -i data/ITS2/OTUs_100/seqs_chimera_filtered_otus.txt -m most_abundant -f data/ITS2/seqs_chimera_filtered.fasta -o data/ITS2/OTUs_100/rep_set_100.fasta
+count_seqs.py -i data/ITS2/OTUs_100/rep_set_100.fasta
+
+# Assign taxonomy by blast
+assign_taxonomy.py -i data/ITS2/OTUs_100/rep_set_100.fasta -r data/ITS2/Unaligned_ITS2_Database_23April13.fasta -t data/ITS2/id_to_taxonomy_subtype_mod.txt -m blast -o data/ITS2/OTUs_100/blast_taxonomy_100
+
+# Make list of "no blast hits"
+awk '/No blast hit/' data/ITS2/OTUs_100/blast_taxonomy_100/rep_set_100_tax_assignments.txt > data/ITS2/OTUs_100/blast_taxonomy_100/no_hits_100.txt
+ 
+# Make OTU table excluding no blast hits
+make_otu_table.py -i data/ITS2/OTUs_100/seqs_chimera_filtered_otus.txt -t data/ITS2/OTUs_100/blast_taxonomy_100/rep_set_100_tax_assignments.txt -e data/ITS2/OTUs_100/blast_taxonomy_100/no_hits_100.txt -o data/ITS2/OTUs_100/otu_table_100.biom
+
+biom convert -i data/ITS2/OTUs_100/otu_table_100.biom -o data/ITS2/OTUs_100/otu_table_100.tsv --to-tsv
