@@ -1,3 +1,9 @@
+# Title: Patterns of bleaching and recovery of Montipora capitata in Kaneohe Bay
+# Author: Ross Cunning
+# Last updated: 26 October, 2015
+# =================================================================================================
+# Supplementary Materials
+# =================================================================================================
 
 # Fluorescence normalization --------------------
 file <- "data/supp/20150907_KBayRecov_Mcap_fluornorm_data.csv"
@@ -24,8 +30,6 @@ newdat$fit <- predict(mod, newdat)
 with(newdat[which(newdat$Target.Name=="D"), ], lines(log10(Quantity), fit, col="red"))
 with(newdat[which(newdat$Target.Name=="Mcap"), ], lines(log10(Quantity), fit, col="green"))
 with(newdat[which(newdat$Target.Name=="C"), ], lines(log10(Quantity), fit, col="black"))
-
-
 
 # Copy number -----------------
 # Import data
@@ -71,8 +75,7 @@ x <- svd$v %*% wp %*% t(svd$u) %*% cells
 copynumber <- 1 / x
 copynumber  # Values of 33 and 3 utilized for data analysis
 
-
-##### ITS2 ANALYSIS ----------------
+# ITS2 sequence analysis ----------------
 
 library(phyloseq)
 
@@ -111,35 +114,36 @@ tax_table(phy97.f.p)[rownames(head(otu_table(phy97.f.p)[order(rowSums(otu_table(
 head(otu_table(phy100.f.p)[order(rowSums(otu_table(phy100.f.p)), decreasing=T)])
 tax_table(phy100.f.p)[rownames(head(otu_table(phy100.f.p)[order(rowSums(otu_table(phy100.f.p)), decreasing=T)]))]
 
-# Compare bleached to non-bleached using PERMANOVA
+# Comparisons using PERMANOVA
 library(vegan)
-perm.97.vis <- adonis(phyloseq::distance(phy97.f.p, "bray") ~ vis, 
-                      data=as(sample_data(phy97.f.p), "data.frame"), permutations=999)
+# Compare C-dominated vs. D-dominated colonies: 97% OTUs
 perm.97.clade <- adonis(phyloseq::distance(phy97.f.p, "bray") ~ sym, 
                         data=as(sample_data(phy97.f.p), "data.frame"), permutations=999)
+# Compare bleached C-dominated colonies vs. non-bleached C-dominated colonies: 97% OTUs
 phy97.f.p.C <- subset_samples(phy97.f.p, sym=="C")
 perm.97.visC <- adonis(phyloseq::distance(phy97.f.p.C, "bray") ~ vis, 
                        data=as(sample_data(phy97.f.p.C), "data.frame"), permutations=999)
-perm.100.vis <- adonis(phyloseq::distance(phy100.f.p, "bray") ~ vis, 
-                      data=as(sample_data(phy100.f.p), "data.frame"), permutations=999)
+# Compare C-dominated vs. D-dominated colonies: 100% OTUs
 perm.100.clade <- adonis(phyloseq::distance(phy100.f.p, "bray") ~ sym, 
                         data=as(sample_data(phy100.f.p), "data.frame"), permutations=999)
+# Compare bleached C-dominated colonies vs. non-bleached C-dominated colonies: 100% OTUs
 phy100.f.p.C <- subset_samples(phy100.f.p, sym=="C")
 perm.100.visC <- adonis(phyloseq::distance(phy100.f.p.C, "bray") ~ vis, 
                        data=as(sample_data(phy100.f.p.C), "data.frame"), permutations=999)
-
+# Compare non-bleached C-dominated colonies vs. non-bleached D-dominated colonies: 97% OTUs
 phy97.f.p.NB <- subset_samples(phy97.f.p, vis=="not bleached")
 perm.97.cladeNB <- adonis(phyloseq::distance(phy97.f.p.NB, "bray") ~ sym, 
                       data=as(sample_data(phy97.f.p.NB), "data.frame"), permutations=999)
+# Compare non-bleached C-dominated colonies vs. non-bleached D-dominated colonies: 100% OTUs
 phy100.f.p.NB <- subset_samples(phy100.f.p, vis=="not bleached")
 perm.100.cladeNB <- adonis(phyloseq::distance(phy100.f.p.NB, "bray") ~ sym, 
                           data=as(sample_data(phy100.f.p.NB), "data.frame"), permutations=999)
 
-# Better Barplots
-pdf(file = "FigureS1.pdf", width = 6.65354, height=7.65354)
+# Figure S1
+pdf(file = "output/FigureS1.pdf", width = 6.65354, height=7.65354)
 par(mfrow=c(2,1), mar=c(2,3,4,1), mgp=c(3,0.5,0))
 
-# 97%-OTUs barplot -------------------------
+# 97%-OTUs barplot
 samdat <- data.frame(sample_data(phy97.f.p))
 samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
 typerelabund <- as.matrix(otu_table(phy97.f.p)[order(data.frame(tax_table(phy97.f.p))$Subtype), rownames(samdat)])
@@ -163,7 +167,7 @@ text(bars, rep(par("usr")[4]+0.075, length(bars)),
      labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3, cex=0.75)
 mtext(side=3, "A.) 97% OTUs", xpd=T, adj=0, line=2.5, font=2)
 
-# 100%-OTUs barplot -------------------------
+# 100%-OTUs barplot 
 par(mar=c(2,3,4,1))
 samdat <- data.frame(sample_data(phy100.f.p))
 samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
