@@ -136,41 +136,35 @@ perm.100.cladeNB <- adonis(phyloseq::distance(phy100.f.p.NB, "bray") ~ sym,
                           data=as(sample_data(phy100.f.p.NB), "data.frame"), permutations=999)
 
 # Better Barplots
-sample_data(phy97.f.p)$sample <- factor(rownames(sample_data(phy97.f.p)),
-                                        levels=c("6K","20K","58K","66K","110K","128K","3K","11K","127K"))
-sample_data(phy100.f.p)$sample <- factor(rownames(sample_data(phy100.f.p)),
-                                        levels=c("6K","20K","58K","66K","110K","128K","3K","11K","127K"))
-plot_bar(phy97.f.p, x="sample", y="Abundance", fill="Subtype")
-plot_bar(phy100.f.p, x="sample", y="Abundance", fill="Subtype")
+pdf(file = "FigureS1.pdf", width = 6.65354, height=7.65354)
+par(mfrow=c(2,1), mar=c(2,3,4,1), mgp=c(3,0.5,0))
 
-
-# 97%-OTUs barplot
+# 97%-OTUs barplot -------------------------
 samdat <- data.frame(sample_data(phy97.f.p))
 samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
 typerelabund <- as.matrix(otu_table(phy97.f.p)[order(data.frame(tax_table(phy97.f.p))$Subtype), rownames(samdat)])
-typerelabund
 # Get info for plotting OTU names and blast hits on top of barplot
 blasthits <- as.character(data.frame(tax_table(phy97.f.p))[order(data.frame(tax_table(phy97.f.p))$Subtype), "Subtype"])
 names <- as.character(data.frame(tax_table(phy97.f.p))[order(data.frame(tax_table(phy97.f.p))$Subtype), "otuname"])
 divides <- apply(typerelabund, 2, cumsum)
 heights <- diff(divides)
-heights[heights < 0.02] <- NA
-bars <- barplot(typerelabund, col=rainbow(10), lwd=0.1,
-                xlab="Sample", ylab="Relative Abundance")
+heights[heights < 0.04] <- NA
+bars <- barplot(typerelabund, col=gray.colors(10), las=1, xlab="", ylab="", cex.axis=0.75, cex.names=0.75)
+mtext(side=2, text = "Relative Abundance", line=2)
 for (i in 1:length(bars)) {
   text(rep(bars[i], length(heights[which(!is.na(heights[,i])),i])), 
        divides[which(!is.na(heights[,i])),i] + heights[which(!is.na(heights[,i])),i] / 2, 
        labels=paste(names[which(!is.na(heights[,i]))+1], blasthits[which(!is.na(heights[,i]))+1],sep="\n"),
-       cex=0.5)
+       cex=0.4)
 }
 text(bars, rep(par("usr")[4], length(bars)),
-     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3)
+     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3, cex=0.75)
 text(bars, rep(par("usr")[4]+0.075, length(bars)),
-     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3)
+     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3, cex=0.75)
+mtext(side=3, "A.) 97% OTUs", xpd=T, adj=0, line=2.5, font=2)
 
-
-
-# 100%-OTUs barplot
+# 100%-OTUs barplot -------------------------
+par(mar=c(2,3,4,1))
 samdat <- data.frame(sample_data(phy100.f.p))
 samdat <- samdat[c("6K","20K","58K","66K","110K","128K","3K","11K","127K"), ]
 typerelabund <- as.matrix(otu_table(phy100.f.p)[order(data.frame(tax_table(phy100.f.p))$Subtype), rownames(samdat)])
@@ -180,18 +174,20 @@ blasthits <- as.character(data.frame(tax_table(phy100.f.p))[order(data.frame(tax
 names <- as.character(data.frame(tax_table(phy100.f.p))[order(data.frame(tax_table(phy100.f.p))$Subtype), "otuname"])
 divides <- apply(typerelabund, 2, cumsum)
 heights <- diff(divides)
-heights[heights < 0.02] <- NA
+heights[heights < 0.04] <- NA
 
 # Plot barplot and OTU names and blast hits
-bars <- barplot(typerelabund, col=rainbow(941), border=NA,
-                xlab="Sample", ylab="Relative Abundance")
+bars <- barplot(typerelabund, col=rainbow(941), border=NA, las=1, xlab="Sample", ylab="", cex.axis=0.75, cex.names=0.75)
+mtext(side=2, text = "Relative Abundance", line=2)
 for (i in 1:length(bars)) {
   text(rep(bars[i], length(heights[which(!is.na(heights[,i])),i])), 
        divides[which(!is.na(heights[,i])),i] + heights[which(!is.na(heights[,i])),i] / 2, 
        labels=paste(names[which(!is.na(heights[,i]))+1],blasthits[which(!is.na(heights[,i]))+1],sep="\n"),
-       cex=0.5)
+       cex=0.4)
 }
 text(bars, rep(par("usr")[4], length(bars)),
-     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3)
+     labels=c("D","D","D","C","C","C","C","C","C"), xpd=T, pos=3, cex=0.75)
 text(bars, rep(par("usr")[4]+0.075, length(bars)),
-     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3)
+     labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3, cex=0.75)
+mtext(side=3, "B.) 100% OTUs", xpd=T, adj=0, line=2.5, font=2)
+dev.off()
