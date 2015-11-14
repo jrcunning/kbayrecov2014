@@ -5,16 +5,12 @@
 # DATA PREPARATION
 # =================================================================================================
 # • Load libraries --------------------------------------------------------------------------------
-library(lme4); library(MASS); library(reshape2); library(lattice); library(lmerTest) 
-library(LMERConvenienceFunctions); library(pbkrtest); library(scales); library(RColorBrewer) 
-library(merTools); library(devtools); library(pBrackets); library(effects); library(lsmeans)
+library(lme4); library(MASS); library(reshape2); library(lattice); library(lmerTest); library(lsmeans)
+library(pbkrtest); library(scales); library(merTools); library(devtools); library(pBrackets)
 ## SPIDA package available at http://r-forge.r-project.org/projects/spida/
 #system(paste("svn checkout svn://svn.r-forge.r-project.org/svnroot/spida/"))
 #devtools::install("spida/pkg")
 library(spida)
-# piecewiseSEM package available on github
-# install_github("jslefche/piecewiseSEM")
-library(piecewiseSEM)
 
 addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   ii <- order(x)
