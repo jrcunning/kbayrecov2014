@@ -409,8 +409,6 @@ for (reef in c("44", "25", "HIMB")) {
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
-
-
 # • Temperature data ---------------------------------------------------------------
 # Import temperature data
 rf25.temp <- read.csv("data/env/Rf25_temps.csv")
@@ -461,7 +459,6 @@ lines(smooth.spline(rf25.split[[1]]$date, rf25.split[[1]]$mean, spar=spar), col=
 lines(smooth.spline(rf25.split[[2]]$date, rf25.split[[2]]$mean, spar=spar), col="blue")
 lines(smooth.spline(rf44$date, rf44$mean, spar=spar), col="darkgreen")
 lines(smooth.spline(HIMB$date, HIMB$mean, spar=spar), col="red")
-
 # • Light data ---------------------------------------------------------------
 # Import light data
 rf25.light <- read.csv("data/env/Rf25_light_new.csv")
@@ -476,7 +473,6 @@ threshdate <- as.Date("2016-05-06", format="%F")
 rf25.light <- rf25.light[which(rf25.light$date < threshdate), ]
 rf44.light <- rf44.light[which(rf44.light$date < threshdate), ]
 HIMB.light <- HIMB.light[which(HIMB.light$date < threshdate), ]
-
 # Aggregate light data by daily mean, minimum, and maximum
 rf25 <- aggregate(data.frame(mean=rf25.light$PAR_µmol_m2_s), by=list(date=rf25.light$date), FUN=mean)
 rf25$max <- aggregate(rf25.light$PAR_µmol_m2_s, by=list(date=rf25.light$date), FUN=max)$x
@@ -484,10 +480,9 @@ rf44 <- aggregate(data.frame(mean=rf44.light$PAR_µmol_m2_s), by=list(date=rf44.
 rf44$max <- aggregate(rf44.light$PAR_µmol_m2_s, by=list(date=rf44.light$date), FUN=max)$x
 HIMB <- aggregate(data.frame(mean=HIMB.light$PAR_µmol_m2_s), by=list(date=HIMB.light$date), FUN=mean)
 HIMB$max <- aggregate(HIMB.light$PAR_µmol_m2_s, by=list(date=HIMB.light$date), FUN=max)$x
-rf25$dli <- rf25$mean * 0.0864
+rf25$dli <- rf25$mean * 0.0864  # Convert from µmol/s to mol/d
 rf44$dli <- rf44$mean * 0.0864
 HIMB$dli <- HIMB$mean * 0.0864
-
 # Plot daily light integral for each reef
 # plot(dli ~ date, rf44, type="l", col="darkgreen", main="Daily light integral", ylab="mol m-2 d-1")
 # lines(dli ~ date, rf25, type="l", col="blue")
@@ -503,13 +498,9 @@ legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","
 # plot(max ~ date, HIMB, type="l", col="red", main="Max. irradiance", ylab="µmol m-2 s-1")
 # lines(max ~ date, rf25, type="l", col="blue")
 # lines(max ~ date, rf44, type="l", col="darkgreen")
+# legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
 plot(max ~ date, rf44, type="n", main="Max. irradiance", ylab="µmol m-2 s-1")
 lines(smooth.spline(HIMB$date, HIMB$max, spar=0.5), col="red")
 lines(smooth.spline(rf25$date, rf25$max, spar=0.5), col="blue")
 lines(smooth.spline(rf44$date, rf44$max, spar=0.5), col="darkgreen")
 legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
-
-
-
-
-
