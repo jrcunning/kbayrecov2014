@@ -409,3 +409,108 @@ for (reef in c("44", "25", "HIMB")) {
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
 dev.off()
+
+# ------------
+# Light and temperature data
+# • Temperature data ---------------------------------------------------------------
+# Import temperature data
+rf25.temp <- read.csv("data/env/Rf25_temps.csv")
+rf44.temp <- read.csv("data/env/Rf44_temps.csv")
+HIMB.temp <- read.csv("data/env/HIMB_temps.csv")
+# Set date and time to POSIXct
+rf25.temp$datetime <- paste(rf25.temp$date, rf25.temp$time)
+rf25.temp$time <- as.POSIXct(rf25.temp$datetime, format="%m/%e/%y %H:%M:%S")
+rf25.temp <- rf25.temp[, c(2,3,4)]
+rf44.temp$datetime <- paste(rf44.temp$date, rf44.temp$time)
+rf44.temp$time <- as.POSIXct(rf44.temp$datetime, format="%m/%e/%y %H:%M:%S")
+rf44.temp <- rf44.temp[, c(2,3,4)]
+HIMB.temp$datetime <- paste(HIMB.temp$date, HIMB.temp$time)
+HIMB.temp$time <- as.POSIXct(HIMB.temp$datetime, format="%m/%e/%y %H:%M:%S")
+HIMB.temp <- HIMB.temp[, c(2,3,4)]
+# Subset data only up until threshdate
+threshdate <- as.POSIXct("2015-05-06", format="%F")
+rf25.temp <- rf25.temp[which(rf25.temp$time < threshdate), ]
+rf44.temp <- rf44.temp[which(rf44.temp$time < threshdate), ]
+HIMB.temp <- HIMB.temp[which(HIMB.temp$time < threshdate), ]
+
+# Aggregate temperature data by daily mean, minimum, and maximum
+rf25 <- aggregate(data.frame(mean=rf25.temp$temp_cal), by=list(date=as.Date(rf25.temp$time)), FUN=mean)
+rf25$min <- aggregate(rf25.temp$temp_cal, by=list(as.Date(rf25.temp$time)), FUN=min)$x
+rf25$max <- aggregate(rf25.temp$temp_cal, by=list(as.Date(rf25.temp$time)), FUN=max)$x
+rf44 <- aggregate(data.frame(mean=rf44.temp$temp_cal), by=list(date=as.Date(rf44.temp$time)), FUN=mean)
+rf44$min <- aggregate(rf44.temp$temp_cal, by=list(as.Date(rf44.temp$time)), FUN=min)$x
+rf44$max <- aggregate(rf44.temp$temp_cal, by=list(as.Date(rf44.temp$time)), FUN=max)$x
+HIMB <- aggregate(data.frame(mean=HIMB.temp$temp_cal), by=list(date=as.Date(HIMB.temp$time)), FUN=mean)
+HIMB$min <- aggregate(HIMB.temp$temp_cal, by=list(as.Date(HIMB.temp$time)), FUN=min)$x
+HIMB$max <- aggregate(HIMB.temp$temp_cal, by=list(as.Date(HIMB.temp$time)), FUN=max)$x
+
+# Plot daily mean, min, and max for each reef
+plot(mean ~ date, rf44, type="l", col="darkgreen", ylim=c(21.5,30))
+polygon(x=c(rf44$date, rev(rf44$date)), y=c(rf44$min, rev(rf44$max)),
+        border=NA, col=alpha("darkgreen", 0.2))
+lines(mean ~ date, HIMB, type="l", col="red")
+polygon(x=c(HIMB$date, rev(HIMB$date)), y=c(HIMB$min, rev(HIMB$max)),
+        border=NA, col=alpha("red", 0.2))
+rf25.split <- split(rf25, f=rf25$date < as.Date("2014-11-21", format="%F"))
+lines(mean ~ date, rf25.split[[1]], type="l", col="blue")
+polygon(x=c(rf25.split[[1]]$date, rev(rf25.split[[1]]$date)), y=c(rf25.split[[1]]$min, rev(rf25.split[[1]]$max)),
+        border=NA, col=alpha("blue", 0.2))
+lines(mean ~ date, rf25.split[[2]], type="l", col="blue")
+polygon(x=c(rf25.split[[2]]$date, rev(rf25.split[[2]]$date)), y=c(rf25.split[[2]]$min, rev(rf25.split[[2]]$max)),
+        border=NA, col=alpha("blue", 0.2))
+legend("topright", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
+
+
+
+
+# • Light data ---------------------------------------------------------------
+# Import light data
+rf25.light <- read.csv("data/env/Rf25_light_new.csv")
+rf44.light <- read.csv("data/env/Rf44_light_new.csv")
+HIMB.light <- read.csv("data/env/HIMB_light_new.csv")
+# Set date to date class
+rf25.light$date <- as.Date(rf25.light$date, format="%F")
+rf44.light$date <- as.Date(rf44.light$date, format="%F")
+HIMB.light$date <- as.Date(HIMB.light$date, format="%F")
+# Subset data only up until threshdate
+threshdate <- as.Date("2016-05-06", format="%F")
+rf25.light <- rf25.light[which(rf25.light$date < threshdate), ]
+rf44.light <- rf44.light[which(rf44.light$date < threshdate), ]
+HIMB.light <- HIMB.light[which(HIMB.light$date < threshdate), ]
+
+# Aggregate light data by daily mean, minimum, and maximum
+rf25 <- aggregate(data.frame(mean=rf25.light$PAR_µmol_m2_s), by=list(date=rf25.light$date), FUN=mean)
+rf25$max <- aggregate(rf25.light$PAR_µmol_m2_s, by=list(date=rf25.light$date), FUN=max)$x
+rf44 <- aggregate(data.frame(mean=rf44.light$PAR_µmol_m2_s), by=list(date=rf44.light$date), FUN=mean)
+rf44$max <- aggregate(rf44.light$PAR_µmol_m2_s, by=list(date=rf44.light$date), FUN=max)$x
+HIMB <- aggregate(data.frame(mean=HIMB.light$PAR_µmol_m2_s), by=list(date=HIMB.light$date), FUN=mean)
+HIMB$max <- aggregate(HIMB.light$PAR_µmol_m2_s, by=list(date=HIMB.light$date), FUN=max)$x
+rf25$dli <- rf25$mean * 0.0864
+rf44$dli <- rf44$mean * 0.0864
+HIMB$dli <- HIMB$mean * 0.0864
+
+# Plot daily light integral for each reef
+plot(dli ~ date, rf44, type="l", col="darkgreen", main="Daily light integral", ylab="mol m-2 d-1")
+lines(dli ~ date, rf25, type="l", col="blue")
+lines(dli ~ date, HIMB, type="l", col="red")
+legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
+plot(dli ~ date, rf44, type="n", main="Daily light integral", ylab="mol m-2 d-1")
+lines(smooth.spline(HIMB$date, HIMB$dli, spar=0.5), col="red")
+lines(smooth.spline(rf25$date, rf25$dli, spar=0.5), col="blue")
+lines(smooth.spline(rf44$date, rf44$dli, spar=0.5), col="darkgreen")
+legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
+
+# Plot daily maximum irradiance for each reef
+plot(max ~ date, HIMB, type="l", col="red", main="Max. irradiance", ylab="µmol m-2 s-1")
+lines(max ~ date, rf25, type="l", col="blue")
+lines(max ~ date, rf44, type="l", col="darkgreen")
+plot(max ~ date, rf44, type="n", main="Max. irradiance", ylab="µmol m-2 s-1")
+lines(smooth.spline(HIMB$date, HIMB$max, spar=0.5), col="red")
+lines(smooth.spline(rf25$date, rf25$max, spar=0.5), col="blue")
+lines(smooth.spline(rf44$date, rf44$max, spar=0.5), col="darkgreen")
+legend("topleft", lty=1, col=c("darkgreen", "blue", "red"), legend=c("44","25","HIMB"))
+
+
+
+
+
