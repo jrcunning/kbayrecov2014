@@ -27,7 +27,7 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
 # -------------------------------------------------------------------------------------------------
 # • Load data -------------------------------------------------------------------------------------
 # Use steponeR to import data and calculate S/H ratios
-source("~/Documents/Academia/HIMB/steponeR/steponeR.R")
+source_url("https://raw.githubusercontent.com/jrcunning/steponeR/master/steponeR.R")
 # Get list of plate files to read in
 Mcap.plates <- list.files(path="data/qPCR", pattern="csv$", full.names=T)
 Mcap <- steponeR(files=Mcap.plates, target.ratios=c("C.Mcap", "D.Mcap"),
