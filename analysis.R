@@ -43,6 +43,10 @@ par(new=T, mar=c(9,12.8,0,0))
 plot(img2)
 box()
 dev.off()
+# Table of sampling design
+cdf <- count(Mcap.f, vars = c("date", "reef", "vis"))
+cdf
+
 # • Analysis: Symbiodinium community structure --------------------------
 # Proportion of samples with C only, D only, and C+D mixtures
 symtab <- table(Mcap.f$syms)
