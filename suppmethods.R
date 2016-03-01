@@ -1,6 +1,6 @@
 # Title: Patterns of bleaching and recovery of Montipora capitata in Kaneohe Bay
 # Author: Ross Cunning
-# Last updated: 26 October, 2015
+# Last updated: 1 March 2016
 # =================================================================================================
 # Supplementary Materials
 # =================================================================================================
@@ -194,4 +194,159 @@ text(bars, rep(par("usr")[4], length(bars)),
 text(bars, rep(par("usr")[4]+0.075, length(bars)),
      labels=c("NB","NB","NB","NB","NB","NB","B","B","B"), xpd=T, pos=3, cex=0.75)
 mtext(side=3, "B.) 100% OTUs", xpd=T, adj=0, line=2.5, font=2)
+dev.off()
+
+# Temperature and light data analysis ------
+library(scales); library(zoo)
+reefcols <- c("#8dd3c7", "#bebada", "#d9d9d9")
+ 
+# Import temperature data
+rf25.temp <- rbind(read.csv("data/temp_light/temp_reef25_2014.csv"),
+                   read.csv("data/temp_light/temp_reef25_2015.csv"))
+rf44.temp <- rbind(read.csv("data/temp_light/temp_reef44_2014.csv"),
+                   read.csv("data/temp_light/temp_reef44_2015.csv"))
+HIMB.temp <- rbind(read.csv("data/temp_light/temp_reefHIMB_2014.csv"),
+                   read.csv("data/temp_light/temp_reefHIMB_2015.csv"))
+# set date to date class
+rf25.temp$date <- as.Date(rf25.temp$date, format="%m/%e/%Y")
+rf44.temp$date <- as.Date(rf44.temp$date, format="%m/%e/%Y")
+HIMB.temp$date <- as.Date(HIMB.temp$date, format="%m/%e/%Y")
+# Subset data only up until threshdate
+threshdate <- as.Date("2015-05-06", format="%F")
+rf25.temp <- rf25.temp[which(rf25.temp$date < threshdate), ]
+rf44.temp <- rf44.temp[which(rf44.temp$date < threshdate), ]
+HIMB.temp <- HIMB.temp[which(HIMB.temp$date < threshdate), ]
+
+# Aggregate temperature data by daily mean, minimum, and maximum
+rf25t.split <- split(rf25.temp, f=rf25.temp$date < as.Date("2014-11-21", format="%F"))
+rf25t.1 <- aggregate(data.frame(mean=rf25t.split[[2]]$temp_raw_C), by=list(date=rf25t.split[[2]]$date), FUN=mean)
+rf25t.1$min <- aggregate(rf25t.split[[2]]$temp_raw_C, by=list(rf25t.split[[2]]$date), FUN=min)$x
+rf25t.1$max <- aggregate(rf25t.split[[2]]$temp_raw_C, by=list(rf25t.split[[2]]$date), FUN=max)$x
+rf25t.2 <- aggregate(data.frame(mean=rf25t.split[[1]]$temp_cal_C), by=list(date=rf25t.split[[1]]$date), FUN=mean)
+rf25t.2$min <- aggregate(rf25t.split[[1]]$temp_cal_C, by=list(rf25t.split[[1]]$date), FUN=min)$x
+rf25t.2$max <- aggregate(rf25t.split[[1]]$temp_cal_C, by=list(rf25t.split[[1]]$date), FUN=max)$x
+rf44t <- aggregate(data.frame(mean=rf44.temp$temp_cal), by=list(date=rf44.temp$date), FUN=mean)
+rf44t$min <- aggregate(rf44.temp$temp_cal, by=list(rf44.temp$date), FUN=min)$x
+rf44t$max <- aggregate(rf44.temp$temp_cal, by=list(rf44.temp$date), FUN=max)$x
+HIMBt <- aggregate(data.frame(mean=HIMB.temp$temp_cal), by=list(date=HIMB.temp$date), FUN=mean)
+HIMBt$min <- aggregate(HIMB.temp$temp_cal, by=list(HIMB.temp$date), FUN=min)$x
+HIMBt$max <- aggregate(HIMB.temp$temp_cal, by=list(HIMB.temp$date), FUN=max)$x
+
+# Import light data
+rf25.light <- read.csv("data/temp_light/light_reef25_2015.csv")
+rf44.light <- rbind(read.csv("data/temp_light/light_reef44_2014.csv"),
+                    read.csv("data/temp_light/light_reef44_2015.csv"))
+HIMB.light <- rbind(read.csv("data/temp_light/light_reefHIMB_2014.csv"),
+                    read.csv("data/temp_light/light_reefHIMB_2015.csv"))
+# Set date to date class
+rf25.light$date <- as.Date(rf25.light$date, format="%e/%m/%Y")
+rf44.light$date <- as.Date(rf44.light$date, format="%e/%m/%Y")
+HIMB.light$date <- as.Date(HIMB.light$date, format="%e/%m/%Y")
+# Subset data only up until threshdate
+threshdate <- as.Date("2015-08-06", format="%F")
+rf25.light <- rf25.light[which(rf25.light$date < threshdate), ]
+rf44.light <- rf44.light[which(rf44.light$date < threshdate), ]
+HIMB.light <- HIMB.light[which(HIMB.light$date < threshdate), ]
+# Aggregate light data by daily mean, minimum, and maximum
+rf25l <- aggregate(data.frame(mean=rf25.light$PAR_calibrated_umol.m.2.s), by=list(date=rf25.light$date), FUN=mean)
+rf25l$max <- aggregate(rf25.light$PAR_calibrated_umol.m.2.s, by=list(date=rf25.light$date), FUN=max)$x
+rf44l <- aggregate(data.frame(mean=rf44.light$PAR_calibrated_umol.m.2.s), by=list(date=rf44.light$date), FUN=mean)
+rf44l$max <- aggregate(rf44.light$PAR_calibrated_umol.m.2.s, by=list(date=rf44.light$date), FUN=max)$x
+HIMBl <- aggregate(data.frame(mean=HIMB.light$PAR_calibrated_umol.m.2.s), by=list(date=HIMB.light$date), FUN=mean)
+HIMBl$max <- aggregate(HIMB.light$PAR_calibrated_umol.m.2.s, by=list(date=HIMB.light$date), FUN=max)$x
+rf25l$dli <- rf25l$mean * 0.0864  # Convert from µmol/s to mol/d
+rf44l$dli <- rf44l$mean * 0.0864
+HIMBl$dli <- HIMBl$mean * 0.0864
+
+# # Plot daily light integral for each reef
+# k=5 # k-day moving averages
+# plot(dli ~ date, rf44l, type="n", main="Temperature mean and range", ylab="°C")
+# legend("topright", lty=1, col=c(reefcols[1:2], "darkgray"), legend=c("44","25","HIMB"), lwd=2)
+# with(na.omit(data.frame(date=HIMBl$date, dli=rollmean(HIMBl$dli, k, fill=NA))), lines(date, dli, col=reefcols[3], lwd=1))
+# with(na.omit(data.frame(date=rf25l$date, dli=rollmean(rf25l$dli, k, fill=NA))), lines(date, dli, col=reefcols[2], lwd=1))
+# with(na.omit(data.frame(date=rf44l$date, dli=rollmean(rf44l$dli, k, fill=NA))), lines(date, dli, col=reefcols[1], lwd=1))
+
+
+# Recalibrate reef 25 using linear fit
+# equation from excel: y=0.1178x
+rf25.light$PAR_linear_calibrated_umol.m.2.s <- rf25.light$PAR_raw * 0.1178
+rf25l.lin <- aggregate(data.frame(mean=rf25.light$PAR_linear_calibrated_umol.m.2.s), by=list(date=rf25.light$date), FUN=mean)
+rf25l.lin$max <- aggregate(rf25.light$PAR_linear_calibrated_umol.m.2.s, by=list(date=rf25.light$date), FUN=max)$x
+rf25l.lin$dli <- rf25l.lin$mean * 0.0864 
+
+# Recalibrate reef 44 using linear fit
+# equation from excel: y=0.0602x
+rf44.light$PAR_linear_calibrated_umol.m.2.s <- rf44.light$PAR_raw * 0.0602
+rf44l.lin <- aggregate(data.frame(mean=rf44.light$PAR_linear_calibrated_umol.m.2.s), by=list(date=rf44.light$date), FUN=mean)
+rf44l.lin$max <- aggregate(rf44.light$PAR_linear_calibrated_umol.m.2.s, by=list(date=rf44.light$date), FUN=max)$x
+rf44l.lin$dli <- rf44.lin$mean * 0.0864 
+
+# Recalibrate reef HIMB using linear fit
+# logger 2489 (17 Dec 2014 - 26 May 2015): << calibration pending >>
+# logger 4805 (26 May 2015 - 31 Dec 2015): y=0.0709x
+HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_linear_calibrated_umol.m.2.s"] <- NA #HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_raw"] * ______
+HIMB.light[which(HIMB.light$date >= as.Date("2015-05-26")), "PAR_linear_calibrated_umol.m.2.s"] <- HIMB.light[which(HIMB.light$date >= as.Date("2015-05-26")), "PAR_raw"] * 0.0709
+HIMBl.lin <- aggregate(data.frame(mean=HIMB.light$PAR_linear_calibrated_umol.m.2.s), by=list(date=HIMB.light$date), FUN=mean, na.rm=T)
+HIMBl.lin$max <- aggregate(HIMB.light$PAR_linear_calibrated_umol.m.2.s, by=list(date=HIMB.light$date), FUN=max)$x
+HIMBl.lin$dli <- HIMBl.lin$mean * 0.0864 
+
+# Plot temp. daily mean, min, and max for each reef
+pdf(file="output/FigureS2.pdf",  width = 6.65354, height=5)
+par(mfrow=c(2,1), mar=c(2,3,1,1), mgp=c(2,0.5,0))
+k=1; lwd=0.5 # k-day moving averages
+plot(mean ~ date, rf44t, type="n", ylab="Temperature (°C)", xaxt="n", xlab="")
+mtext(expression(bold("A")), 2, adj=4.5, las=1, padj=-8)
+axis.Date(1, at=seq(min(rf44t$date), max(rf44t$date), by="1 mon"), format="%b '%y")
+legend("topright", lty=1, col=c(reefcols[1:2], "darkgray"), legend=c("44","25","HIMB"), lwd=2, bty="n")
+with(na.omit(data.frame(date=HIMBt$date, rollmean(HIMBt[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[3], 0.3))
+  lines(date, mean, col=reefcols[3], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf25t.1$date, rollmean(rf25t.1[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[2], 0.3))
+  lines(date, mean, col=reefcols[2], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf25t.2$date, rollmean(rf25t.2[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[2], 0.3))
+  lines(date, mean, col=reefcols[2], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf44t$date, rollmean(rf44t[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[1], 0.3))
+  lines(date, mean, col=reefcols[1], lwd=lwd)
+})
+k=7; lwd=2
+with(na.omit(data.frame(date=HIMBt$date, rollmean(HIMBt[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[3], 0.3))
+  lines(date, mean, col=reefcols[3], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf25t.1$date, rollmean(rf25t.1[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[2], 0.3))
+  lines(date, mean, col=reefcols[2], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf25t.2$date, rollmean(rf25t.2[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[2], 0.3))
+  lines(date, mean, col=reefcols[2], lwd=lwd)
+})
+with(na.omit(data.frame(date=rf44t$date, rollmean(rf44t[, c("mean", "min", "max")], k, fill=NA))), {
+  #polygon(x=c(date, rev(date)), y=c(max, rev(min)), border=NA, col=alpha(reefcols[1], 0.3))
+  lines(date, mean, col=reefcols[1], lwd=lwd)
+})
+# Plot LINEARLY CALIBRATED daily light integral for each reef
+k=1; lwd=0.5 # k-day moving averages
+plot(dli ~ date, rf44l.lin, type="n", ylab="DLI (mol m-2 d-1)", xaxt="n", xlab="")
+mtext(expression(bold("B")), 2, adj=4.5, las=1, padj=-8)
+axis.Date(1, at=seq(min(rf44l.lin$date), max(rf44l.lin$date), by="1 mon"), format="%b '%y")
+#mtext(side=3, text="HIMB - logger 4805 only")
+legend("topleft", lty=1, col=c(reefcols[1:2], "darkgray"), legend=c("44","25","HIMB"), lwd=2, bty="n")
+with(na.omit(data.frame(date=HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "date"], 
+                        dli=rollmean(HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "dli"], k, fill=NA))), 
+     lines(date, dli, col=reefcols[3], lwd=lwd))
+with(na.omit(data.frame(date=rf25l.lin$date, dli=rollmean(rf25l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[2], lwd=lwd))
+with(na.omit(data.frame(date=rf44l.lin$date, dli=rollmean(rf44l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[1], lwd=lwd))
+k=7; lwd=2
+with(na.omit(data.frame(date=HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "date"], 
+                        dli=rollmean(HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "dli"], k, fill=NA))), 
+     lines(date, dli, col=reefcols[3], lwd=lwd))
+with(na.omit(data.frame(date=rf25l.lin$date, dli=rollmean(rf25l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[2], lwd=lwd))
+with(na.omit(data.frame(date=rf44l.lin$date, dli=rollmean(rf44l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[1], lwd=lwd))
 dev.off()
