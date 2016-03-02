@@ -243,7 +243,7 @@ rf25.light$date <- as.Date(rf25.light$date, format="%e/%m/%Y")
 rf44.light$date <- as.Date(rf44.light$date, format="%e/%m/%Y")
 HIMB.light$date <- as.Date(HIMB.light$date, format="%e/%m/%Y")
 # Subset data only up until threshdate
-threshdate <- as.Date("2015-08-06", format="%F")
+threshdate <- as.Date("2015-12-31", format="%F")
 rf25.light <- rf25.light[which(rf25.light$date < threshdate), ]
 rf44.light <- rf44.light[which(rf44.light$date < threshdate), ]
 HIMB.light <- HIMB.light[which(HIMB.light$date < threshdate), ]
@@ -279,12 +279,13 @@ rf25l.lin$dli <- rf25l.lin$mean * 0.0864
 rf44.light$PAR_linear_calibrated_umol.m.2.s <- rf44.light$PAR_raw * 0.0602
 rf44l.lin <- aggregate(data.frame(mean=rf44.light$PAR_linear_calibrated_umol.m.2.s), by=list(date=rf44.light$date), FUN=mean)
 rf44l.lin$max <- aggregate(rf44.light$PAR_linear_calibrated_umol.m.2.s, by=list(date=rf44.light$date), FUN=max)$x
-rf44l.lin$dli <- rf44.lin$mean * 0.0864 
+rf44l.lin$dli <- rf44l.lin$mean * 0.0864 
 
 # Recalibrate reef HIMB using linear fit
 # logger 2489 (17 Dec 2014 - 26 May 2015): << calibration pending >>
 # logger 4805 (26 May 2015 - 31 Dec 2015): y=0.0709x
-HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_linear_calibrated_umol.m.2.s"] <- NA #HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_raw"] * ______
+HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_linear_calibrated_umol.m.2.s"] <- HIMB.light[which(HIMB.light$date < as.Date("2015-05-26")), "PAR_raw"] * 0.09  #0.0528     # 0.18511738
+# Above calibration of logger 2489 for HIMB prior to May 26 2015 is problematic -- needs to be recalibrated in same way as other loggers.
 HIMB.light[which(HIMB.light$date >= as.Date("2015-05-26")), "PAR_linear_calibrated_umol.m.2.s"] <- HIMB.light[which(HIMB.light$date >= as.Date("2015-05-26")), "PAR_raw"] * 0.0709
 HIMBl.lin <- aggregate(data.frame(mean=HIMB.light$PAR_linear_calibrated_umol.m.2.s), by=list(date=HIMB.light$date), FUN=mean, na.rm=T)
 HIMBl.lin$max <- aggregate(HIMB.light$PAR_linear_calibrated_umol.m.2.s, by=list(date=HIMB.light$date), FUN=max)$x
@@ -338,15 +339,29 @@ mtext(expression(bold("B")), 2, adj=4.5, las=1, padj=-8)
 axis.Date(1, at=seq(min(rf44l.lin$date), max(rf44l.lin$date), by="1 mon"), format="%b '%y")
 #mtext(side=3, text="HIMB - logger 4805 only")
 legend("topleft", lty=1, col=c(reefcols[1:2], "darkgray"), legend=c("44","25","HIMB"), lwd=2, bty="n")
-with(na.omit(data.frame(date=HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "date"], 
-                        dli=rollmean(HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "dli"], k, fill=NA))), 
-     lines(date, dli, col=reefcols[3], lwd=lwd))
+#with(na.omit(data.frame(date=HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "date"], 
+#                        dli=rollmean(HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "dli"], k, fill=NA))), 
+#     lines(date, dli, col=reefcols[3], lwd=lwd))
+with(na.omit(data.frame(date=HIMBl.lin$date, dli=rollmean(HIMBl.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[3], lwd=lwd))
 with(na.omit(data.frame(date=rf25l.lin$date, dli=rollmean(rf25l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[2], lwd=lwd))
 with(na.omit(data.frame(date=rf44l.lin$date, dli=rollmean(rf44l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[1], lwd=lwd))
 k=7; lwd=2
 with(na.omit(data.frame(date=HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "date"], 
                         dli=rollmean(HIMBl.lin[which(HIMBl.lin$date >= as.Date("2015-05-26")), "dli"], k, fill=NA))), 
      lines(date, dli, col=reefcols[3], lwd=lwd))
+with(na.omit(data.frame(date=HIMBl.lin$date, dli=rollmean(HIMBl.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[3], lwd=lwd))
 with(na.omit(data.frame(date=rf25l.lin$date, dli=rollmean(rf25l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[2], lwd=lwd))
 with(na.omit(data.frame(date=rf44l.lin$date, dli=rollmean(rf44l.lin$dli, k, fill=NA))), lines(date, dli, col=reefcols[1], lwd=lwd))
 dev.off()
+
+
+# Test diffs between June 1, 2015 - Dec 31, 2015
+testl <- rbind(
+  data.frame(date=HIMBl$date, reef="HIMB", dli=HIMBl$dli),
+  data.frame(date=rf25l$date, reef="rf25", dli=rf25l$dli),
+  data.frame(date=rf44l$date, reef="rf44", dli=rf44l$dli)
+)
+testl <- testl[which(testl$date > as.Date("2015-06-01") & testl$date < "2015-12-31"), ]
+
+boxplot(testl$dli ~ testl$reef)
+summary(aov(testl$dli ~ testl$reef))
