@@ -95,7 +95,7 @@ b1 <- barplot(as.matrix(clades)[,c(2,1)], beside=F, space=0.75, mgp=c(1,0.25,0),
 axis(side=1, at=b1, labels=c("Samples", "Colonies"), lty=0, cex.axis=0.75, padj=1, line=-0.6)
 text(b1, par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.75,
      labels = paste("n=", c(sum(samples), dim(colonies)[1]), sep=""))
-text(b1[2], par("usr")[3] - 0.11, labels = "(sampled 3-6x)", cex=0.5, xpd=T)
+text(b1[2], par("usr")[3] - 0.11, labels = "(sampled 3-6x)", cex=0.6, xpd=T)
 axis(side=2, pos=quantile(par("usr")[1:2], 0.54), las=1, mgp=c(0,-0.4,0), lty=0, cex.axis=0.6,
      at=c(0,0.2,0.4,0.6,0.8,1),
      labels = c("-0.0-", "-0.2-", "-0.4-", "-0.6-", "-0.8-", "-1.0-"))
@@ -144,9 +144,9 @@ par(mfrow=c(1,2), mar=c(2,2,1,1), mgp=c(1.75,0.5,0))
 # Plot barplot of C and D dominance in bleached and healthy corals
 bars <- barplot(t(as.matrix(vis.chi$observed / rowSums(vis.chi$observed))), beside=F, xaxt="n", yaxt="n", yaxs="i",
                 ylab="", xlab="", cex.axis=0.75, cex.names=0.75, mgp=c(1, 0.25, 0), tck=-0.05)
-axis(side=2, cex.axis=0.5, tck=-0.05, mgp=c(0.25,0.25,0))
+axis(side=2, cex.axis=0.6, tck=-0.05, mgp=c(0.25,0.25,0))
 mtext(side=2, text = "Proportion of colonies", line=1.1, cex=0.75)
-text(x=bars, y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.5,
+text(x=bars, y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.6,
      labels=c("n=30", "n=30"))
 text(x=bars, y=par("usr")[3], labels=c("B", "NB"), cex=0.75, pos=1, xpd=T)
 legend(par("usr")[2] * c(0.95,1.15), c(0.5, 0.9), 
@@ -155,12 +155,12 @@ text(x=-0.25, y=par("usr")[4], labels="A", xpd=T, pos=2)
 # Plot bleaching severity in October by tdom:vis
 par(mgp=c(2,0.5,0), mar=c(2,3.5,1,1))
 dat <- summary(sh.lsm)
-plot(dat$lsmean, ylim=c(-5,-1.5), ylab="", yaxs="i", cex.axis=0.5,
+plot(dat$lsmean, ylim=c(-5,-1.5), ylab="", yaxs="i", cex.axis=0.6,
      line=1, bty="n", xpd=T, xaxt="n", xlab="", tck=-0.05, mgp=c(0.25,0.25,0))
 mtext(side=2, "ln S/H", line=2, cex=0.75)
 arrows(c(1,2,3), dat$lsmean - dat$SE, c(1,2,3), dat$lsmean + dat$SE, code=3, angle=90, length=0.075, xpd=T)
 points(c(1,2,3), dat$lsmean, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, xpd=T)
-text(c(1,2,3), dat$lsmean + dat$SE, labels=c("a","b","b"), pos=3, xpd=T, cex=0.5)
+text(c(1,2,3), dat$lsmean + dat$SE, labels=c("a","b","b"), pos=3, xpd=T, cex=0.6)
 axis(side=1, at=c(1,2,3), labels=NA, tck=0.05)
 text(c(1,2,3), par("usr")[3], xpd=T, pos=1, cex=0.75,
      labels=c("B\n(C)", "NB\n(C)", "NB\n(D)"))
