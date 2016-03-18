@@ -316,7 +316,8 @@ testl <- rbind(
   data.frame(date=rf44l$date, reef="rf44", dli=rf44l$dli)
 )
 lmod <- lmer(dli ~ reef + (1|date), data=testl)
-lsmeans(lmod, "reef", contr="pairwise")  # Light at HIMB ~20% greater than reef 44
+lsmeans(lmod, "reef", contr="pairwise")  # Light at HIMB ~21% greater than reef 44
+
 # Temperature
 testt <- rbind(
   data.frame(date=HIMBt$date, reef="HIMB", temp=HIMBt$mean),
