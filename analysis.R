@@ -156,7 +156,7 @@ axis(side=2, cex.axis=0.6, tck=-0.05, mgp=c(0.25,0.25,0))
 mtext(side=2, text = "Proportion of colonies", line=1.1, cex=0.75)
 text(x=bars, y=par("usr")[4] - 0.03, pos=3, xpd=T, cex=0.6,
      labels=c("n=30", "n=30"))
-text(x=bars, y=par("usr")[3], labels=c("B", "NB"), cex=0.75, pos=1, xpd=T)
+text(x=bars, y=par("usr")[3], labels=c("bl", "nbl"), cex=0.75, pos=1, xpd=T)
 legend(par("usr")[2] * c(0.95,1.15), c(0.5, 0.9), 
        legend=c("D", "C"), fill=c("gray95", "gray20"), xpd=NA, bty="n", cex=0.7, x.intersp=0.25)
 text(x=-0.25, y=par("usr")[4], labels="A", xpd=T, pos=2)
@@ -171,7 +171,7 @@ points(c(1,2,3), dat$lsmean, pch=21, bg=c("gray20", "gray20", "gray95"), cex=2, 
 text(c(1,2,3), dat$lsmean + dat$SE, labels=c("a","b","b"), pos=3, xpd=T, cex=0.6)
 axis(side=1, at=c(1,2,3), labels=NA, tck=0.05)
 text(c(1,2,3), par("usr")[3], xpd=T, pos=1, cex=0.75,
-     labels=c("B\n(C)", "NB\n(C)", "NB\n(D)"))
+     labels=c("bl\n(C)", "nbl\n(C)", "nbl\n(D)"))
 text(x=-0.125, y=par("usr")[4], labels="B", xpd=T, pos=2)
 dev.off()
 # • Analysis: Temporal patterns in Symbiodinium composition -------------------------------
