@@ -373,7 +373,11 @@ plotreefs <- function(mod, pred) {
     with(datlist[[reef]], {
       # Create plot frame for each reef
       plot(NA, xlim=c(0,194), ylim=c(-6.5,-0.4), xaxt="n", bty="n", tck=-0.03, ylab="ln S/H")
-      title(paste("Reef", reef), line=-0.9, adj=0, outer=F)
+      if (reef!="HIMB") {
+        title(paste("Reef", reef), line=-0.9, adj=0, outer=F)
+      } else {
+        title(reef, line=-0.9, adj=0, outer=F)
+      }
       # Plot model fit line and shaded CI for bleached and/or not bleached corals
       with(predlist[[reef]], {
         lapply(predlist[[reef]], function(vis) {
@@ -417,6 +421,9 @@ for (reef in c("44", "25", "HIMB")) {
     lines(days, fit, lty=2)
   })
 }
+text(x=60, y=-1.6, expression(bold("Reef 44")))
+text(x=60, y=-2.7, expression(bold("Reef 25")))
+text(x=60, y=-4.7, expression(bold("HIMB")))
 # add zoom lines
 segments(x0=0, y0=-1, x1=grconvertX(save1.x, from='ndc'), y1=grconvertY(save1.y, from='ndc'), lty=3, xpd=NA)
 segments(x0=82, y0=-1, x1=grconvertX(save2.x, from='ndc'), y1=grconvertY(save2.y, from='ndc'), lty=3, xpd=NA)
