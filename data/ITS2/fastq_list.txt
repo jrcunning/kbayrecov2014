@@ -1,0 +1,10 @@
+sample	r1	r2
+3K	3967-3K-MS-ITSdino_R1.fastq	3967-3K-MS-ITSdino_R2.fastq
+11K	3967-11K-MS-ITSdino_R1.fastq	3967-11K-MS-ITSdino_R2.fastq
+66K	3967-66K-MS-ITSdino_R1.fastq	3967-66K-MS-ITSdino_R2.fastq
+110K	3967-110K-MS-ITSdino_R1.fastq	3967-110K-MS-ITSdino_R2.fastq
+127K	3967-127K-MS-ITSdino_R1.fastq	3967-127K-MS-ITSdino_R2.fastq
+128K	3967-128K-MS-ITSdino_R1.fastq	3967-128K-MS-ITSdino_R2.fastq
+6K	3967-6K-MS-ITSdino_R1.fastq	3967-6K-MS-ITSdino_R2.fastq
+20K	3967-20K-MS-ITSdino_R1.fastq	3967-20K-MS-ITSdino_R2.fastq
+58K	3967-58K-MS-ITSdino_R1.fastq	3967-58K-MS-ITSdino_R2.fastq
