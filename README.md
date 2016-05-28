@@ -1,20 +1,40 @@
-# Symbiosis recovery dynamics after bleaching in *Montipora capitata*
+This repository includes data and analysis scripts to accompany:
 
-### Author: Ross Cunning
+# Patterns of bleaching and recovery of Montipora capitata in Kāneʻohe Bay, Hawaiʻi, USA
+### Authors: Ross Cunning, Raphael Ritson-Williams, Ruth D. Gates
+### Journal: _Marine Ecology Progress Series_
+### Link: [doi:10.3354/meps11733](http://dx.doi.org/10.3354/meps11733)  
+
+-----
+
 ### Description:
-This R project contains data and scripts to analyze recovery dynamics of *Symbiodinium* in *Montipora capitata* corals following a thermal stress event in Kaneohe Bay, Oahu (Hawaii, USA) in late summer 2014. Corals were tagged and resampled 6 times between October 2014 and May 2015, and extracted DNA from each sample was used to measure symbiont to host cell ratios for both clade C and clade D *Symbiodinium*.
+This work analyzes bleaching and recovery dynamics of *Symbiodinium* in *Montipora capitata* corals following a thermal stress event in Kāneʻohe Bay, Oʻahu (Hawaiʻi, USA) in late 2014. Corals were tagged and resampled 6 times between October 2014 and May 2015, and extracted DNA from each sample was used to measure symbiont to host cell ratios for both clade C and clade D *Symbiodinium*.
 
 ### Contents:
-**data/qPCR/:** Directory containing .csv files of symbiont and host quantification data exported directly from Applied Biosystems StepOnePlus Software qPCR platform.
+#### Scripts:
+* **setup.R:** R script that imports and quality controls qPCR data in preparation for analysis.
 
-**data/coast_n83.shp/:** Hawaii coastline shapefile, accessed from [here](http://files.hawaii.gov/dbedt/op/gis/data/coast_n83.shp.zip)
+* **analysis.R:** R script for all data analyses and figures presented in the manuscript.
 
-**data/bleachedpair.png:** Photograph of a bleached and non-bleached pair of _M. capitata_ colonies used in Figure 1 (photo: R. Ritson-Williams)
+* **suppmethods.R:** R script for analyses presented in the Supplement (fluorescence normalization, copy number estimation, ITS2 analysis, environmental data analysis).
 
-**data/supp/:** Directory containing data for Supplementary Methods
+* **ITS2_analysis.txt:** Shell script for bioinformatic analysis of _Symbiodinium_ ITS2 data.
 
-**setup.R:** R script that imports and quality controls qPCR data in preparation for analysis
+#### Data:
+* **data/coast_n83.shp/:** Hawaii coastline shapefile, originally downloaded from [here](http://files.hawaii.gov/dbedt/op/gis/data/coast_n83.shp.zip)
 
-**analysis.R:** R script for all data analysis and generation of figures
+* **data/bleachedpair.png:** Photograph of a bleached and non-bleached pair of _M. capitata_ colonies used in Figure 1 (photo credit: R. Ritson-Williams).
 
-**suppmethods.R:** R script for all analyses presented in the Supplementary Methods (fluorescence normalization and copy number estimation)
+* **data/qPCR/:** Directory containing .csv files of symbiont and host quantification data exported directly from Applied Biosystems StepOnePlus Software qPCR platform.
+
+* **data/ITS2/:** Directory containing ITS2 sequence data .fastq files (raw data) and OTU tables (final result of bioinformatic analysis). Note that intermediate/temporary data files in bioinformatic analysis are not included in the repository.
+
+* **data/supp/:** Directory containing data for fluorescence normalization and gene copy number estimation, presented in the Supplement.
+
+* **data/temp_light/:** Directory containing temperature and light data recorded during the study, originally downloaded from Zenodo.
+    * Links to Zenodo data repositories:
+        + Temperature data: [doi:10.5281/zenodo.53226](http://dx.doi.org/10.5281/zenodo.53226)
+        + Light data: [doi:10.5281/zenodo.53227](http://dx.doi.org/10.5281/zenodo.53227)
+
+#### Output:
+* **output/:** Directory containing the figures and tables produced by the analysis scripts and presented in the manuscript and the Supplement.
