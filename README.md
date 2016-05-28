@@ -2,7 +2,7 @@
 
 This repository includes data and analysis scripts to accompany:
 
-# Patterns of bleaching and recovery of Montipora capitata in Kāneʻohe Bay, Hawaiʻi, USA
+# Patterns of bleaching and recovery of _Montipora capitata_ in Kāneʻohe Bay, Hawaiʻi, USA
 ### Authors: Ross Cunning, Raphael Ritson-Williams, Ruth D. Gates
 ### Journal: _Marine Ecology Progress Series_
 ### Link: [doi:10.3354/meps11733](http://dx.doi.org/10.3354/meps11733)  
