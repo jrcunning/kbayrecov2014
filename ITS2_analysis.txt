@@ -1,5 +1,3 @@
-cd ~/Documents/Academia/HIMB/KBay_recovery_2014/kbayrecov/
-
 mkdir data/ITS2/mergeout
 iu-gen-configs data/ITS2/fastq_list.txt -o data/ITS2/mergeout
 
