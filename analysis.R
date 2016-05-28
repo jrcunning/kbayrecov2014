@@ -1,11 +1,10 @@
-# Title: Patterns of bleaching and recovery of Montipora capitata in Kaneohe Bay
-# Author: Ross Cunning
-# Last updated: 26 October, 2015
 # =================================================================================================
 # Run setup script
 source("setup.R")
 # Set seed
 set.seed(39059978)
+# =================================================================================================
+# DATA ANALYSIS
 # =================================================================================================
 # • Figure 1: Map of Kaneohe Bay and photograph of bleached/non-bleached colonies -------
 # Reef locations and colors

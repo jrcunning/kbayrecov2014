@@ -1,6 +1,3 @@
-# Title: Dynamics and recovery of Montipora capitata symbioses following bleaching in Kaneohe Bay
-# Author: Ross Cunning
-
 # =================================================================================================
 # DATA PREPARATION
 # =================================================================================================
