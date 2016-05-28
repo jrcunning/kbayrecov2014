@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.53231.svg)](http://dx.doi.org/10.5281/zenodo.53231)
+
 This repository includes data and analysis scripts to accompany:
 
 # Patterns of bleaching and recovery of Montipora capitata in Kāneʻohe Bay, Hawaiʻi, USA
